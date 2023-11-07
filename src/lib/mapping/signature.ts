@@ -4,7 +4,7 @@ import { Buffer } from "buffer";
 import { Signable } from '../../types/mapping/signable';
 
 /**
- * Generate a signature on behalf of a logged-in user.
+ * Generate a signature. This function assumes (and requires) a user is logged in.
  * @param data The data to sign.
  * @returns The {@linkcode Buffer} format of the signature.
  */

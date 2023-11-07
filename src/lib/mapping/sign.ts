@@ -5,7 +5,7 @@ import { bufferTob64Url } from '../utils/arweaveUtils'
 import { signature as getSignedData } from './signature';
 
 /**
- * Sign the given transaction. This function assumes (and requires) a user is logged in.
+ * Sign the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
  * @param transaction The transaction to sign.
  * @returns The signed version of the transaction.
  */
