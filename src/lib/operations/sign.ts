@@ -6,7 +6,7 @@ export async function sign(data: any, keyName: string): Promise<any> {
         method: 'POST',
         url: 'http://localhost:3001/sign',
         data: { data, keyName }
-    })).data.data
+    })).data
 
     return signRequest
 
