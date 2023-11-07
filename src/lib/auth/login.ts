@@ -11,7 +11,7 @@ export async function login(): Promise<LoginReturnProps> {
     const baseOptions = {
         authorizationParams: {
             transaction_input: JSON.stringify({
-                othentFunction: "idToken",
+                othentFunction: "KMS",
             }),
             redirect_uri: window.location.origin
         }
@@ -23,7 +23,7 @@ export async function login(): Promise<LoginReturnProps> {
 
     const loginAndGetDecodedJWT = async (options: any): Promise<{ encoded: string, decoded: DecodedJWT }> => {
         await auth0.loginWithPopup(options);
-        const authParams = { transaction_input: JSON.stringify({ othentFunction: "idToken" }) };
+        const authParams = { transaction_input: JSON.stringify({ othentFunction: "KMS" }) };
         const accessToken = await getTokenSilently(auth0, authParams);
         const jwtObj = jwtDecode(accessToken.id_token) as DecodedJWT;
 

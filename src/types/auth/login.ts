@@ -18,6 +18,7 @@ export interface DecodedJWT {
     exp?: number,
     sid?: string,
     nonce?: string,
+    data?: any
 }
 
 
