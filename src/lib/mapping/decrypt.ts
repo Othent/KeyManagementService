@@ -1,10 +1,10 @@
-import { decrypt as decryptFunction } from '../operations/decrypt.js'
-import { login } from '../auth/login.js'
+import { decrypt as decryptFunction } from '../operations/decrypt'
+import { userDetails } from '../auth/userDetails'
 
 
-export async function decrypt(ciphertext: Uint8Array | string | null): Promise<any> {
+export async function decrypt(ciphertext: any): Promise<any> {
 
-    const user = await login()
+    const user = await userDetails()
 
     const decryptedData = await decryptFunction(ciphertext, user.sub)
 

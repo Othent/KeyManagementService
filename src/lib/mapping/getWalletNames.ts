@@ -1,8 +1,8 @@
-import { login } from '../auth/login'
+import { userDetails } from '../auth/userDetails'
 
 export async function getWalletNames(): Promise<any> {
 
-    const user = await login()
+    const user = await userDetails()
 
     return user.email
 

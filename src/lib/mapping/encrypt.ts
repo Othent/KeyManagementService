@@ -1,9 +1,9 @@
-import { encrypt as encryptFunction } from '../operations/encrypt.js'
-import { login } from '../auth/login.js'
+import { encrypt as encryptFunction } from '../operations/encrypt'
+import { userDetails } from '../auth/userDetails'
 
-export async function encrypt(plaintext: Buffer) {
+export async function encrypt(plaintext: string) {
 
-    const user = await login()
+    const user = await userDetails()
 
     const encryptedData = await encryptFunction(plaintext, user.sub)
 

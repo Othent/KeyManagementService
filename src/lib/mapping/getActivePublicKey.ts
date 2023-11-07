@@ -1,9 +1,9 @@
 import { getPublicKey } from '../operations/getPublicKey';
-import { login } from '../auth/login';
+import { userDetails } from '../auth/userDetails';
 
 export async function getActivePublicKey(): Promise<string> {
 
-    const user = await login()
+    const user = await userDetails()
 
     const key = await getPublicKey(user.sub)
 

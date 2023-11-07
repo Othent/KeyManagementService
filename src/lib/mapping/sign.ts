@@ -1,4 +1,4 @@
-import { login } from '../auth/login'
+import { userDetails } from '../auth/userDetails'
 import { getPublicKey } from '../operations/getPublicKey'
 import { hash } from '../utils/arweaveUtils'
 import { bufferTob64Url } from '../utils/arweaveUtils'
@@ -11,7 +11,7 @@ import { signature as getSignedData } from './signature';
  */
 export async function sign(transaction: any): Promise<any> {
 
-    const user = await login()
+    const user = await userDetails()
 
     const owner = await getPublicKey(user.sub)
 
@@ -19,7 +19,7 @@ export async function sign(transaction: any): Promise<any> {
 
     const dataToSign = await transaction.getSignatureData()
 
-    const signature = await getSignedData(dataToSign, user);
+    const signature = await getSignedData(dataToSign);
 
     let id = await hash(signature);
 
