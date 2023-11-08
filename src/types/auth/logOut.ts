@@ -1,5 +1,3 @@
-
-
 export interface LogOutReturnProps {
-    response: string
+  response: string;
 }

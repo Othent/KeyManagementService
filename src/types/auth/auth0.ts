@@ -1,6 +1,3 @@
-
-
 export interface CustomAuthParams {
-    [key: string]: any;
+  [key: string]: any;
 }
-

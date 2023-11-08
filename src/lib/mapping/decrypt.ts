@@ -1,7 +1,5 @@
-import { decrypt as decryptFunction } from '../operations/decrypt'
-import { userDetails } from '../auth/userDetails'
-
-
+import { decrypt as decryptFunction } from "../operations/decrypt";
+import { userDetails } from "../auth/userDetails";
 
 /**
  * Decrypt data with the users JWK. This function assumes (and requires) a user is logged in and a valid encrypt() response.
@@ -9,11 +7,9 @@ import { userDetails } from '../auth/userDetails'
  * @returns The decrypted data.
  */
 export async function decrypt(ciphertext: any): Promise<any> {
+  const user = await userDetails();
 
-    const user = await userDetails()
+  const decryptedData = await decryptFunction(ciphertext, user.sub);
 
-    const decryptedData = await decryptFunction(ciphertext, user.sub)
-
-    return decryptedData
-
+  return decryptedData;
 }

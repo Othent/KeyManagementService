@@ -3,7 +3,7 @@ import * as B64js from "base64-js";
 export type Base64UrlString = string;
 
 export function concatBuffers(
-  buffers: Uint8Array[] | ArrayBuffer[]
+  buffers: Uint8Array[] | ArrayBuffer[],
 ): Uint8Array {
   let total_length = 0;
 
@@ -71,14 +71,14 @@ export function b64UrlDecode(b64UrlString: string): string {
   return b64UrlString.concat("=".repeat(padding));
 }
 
+export async function hash(
+  data: Uint8Array,
+  algorithm: string = "SHA-256",
+): Promise<Uint8Array> {
+  let digest = await crypto.subtle.digest(algorithm, data);
+  return new Uint8Array(digest);
+}
 
-export async function hash(data: Uint8Array, algorithm: string = "SHA-256"): Promise<Uint8Array> {
-    let digest = await crypto.subtle.digest(algorithm, data);
-    return new Uint8Array(digest);
-  }
-
-export async function  ownerToAddress(owner: string): Promise<string> {
-    return bufferTob64Url(
-        await hash(b64UrlToBuffer(owner))
-    );
+export async function ownerToAddress(owner: string): Promise<string> {
+  return bufferTob64Url(await hash(b64UrlToBuffer(owner)));
 }

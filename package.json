@@ -24,9 +24,10 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "build": "rm -rf ./dist && rollup -c && dts-bundle-generator src/index.ts -o dist/index.d.ts --no-banner",
+    "build": "npm run prettier && rm -rf ./dist && rollup -c && dts-bundle-generator src/index.ts -o dist/index.d.ts --no-banner",
     "dev": "npm run build && npm link",
-    "test": "jest tests/"
+    "test": "jest tests/",
+    "prettier": "prettier --write ."
   },
   "jest": {
     "preset": "ts-jest",
@@ -65,6 +66,7 @@
     "@types/node": "^20.2.5",
     "@types/pem-jwk": "^2.0.1",
     "dts-bundle-generator": "^8.0.1",
+    "prettier": "^3.0.3",
     "rollup": "^3.21.6",
     "tslib": "^2.5.0",
     "typescript": "^5.0.4"
