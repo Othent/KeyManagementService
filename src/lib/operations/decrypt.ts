@@ -17,6 +17,6 @@ export async function decrypt(
 
     return decryptRequest;
   } catch (e) {
-    throw new Error(`${e}`);
+    throw new Error("Error decrypting on server.");
   }
 }

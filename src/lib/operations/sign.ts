@@ -13,6 +13,6 @@ export async function sign(data: any, keyName: string): Promise<any> {
 
     return signRequest;
   } catch (e) {
-    throw new Error(`${e}`);
+    throw new Error("Error signing data on server.");
   }
 }

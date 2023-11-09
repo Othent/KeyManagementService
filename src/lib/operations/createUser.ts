@@ -14,6 +14,6 @@ export async function createUser(): Promise<any> {
 
     return createUserRequest;
   } catch (e) {
-    throw new Error(`${e}`);
+    throw new Error("Error creating user on server.");
   }
 }

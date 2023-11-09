@@ -15,6 +15,6 @@ export async function getPublicKey(keyName: string): Promise<string> {
 
     return getPublicKeyRequest;
   } catch (e) {
-    throw new Error(`${e}`);
+    throw new Error("Error retrieving public key on server.");
   }
 }

@@ -17,6 +17,6 @@ export async function encrypt(
 
     return encryptRequest;
   } catch (e) {
-    throw new Error(`${e}`);
+    throw new Error("Error encrypting on server.");
   }
 }
