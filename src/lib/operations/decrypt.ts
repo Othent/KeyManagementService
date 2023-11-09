@@ -1,4 +1,4 @@
-import axios from "axios";
+import { api } from "./api";
 import { encodeToken } from "../auth/encodeToken";
 
 export async function decrypt(
@@ -7,13 +7,16 @@ export async function decrypt(
 ): Promise<string> {
   const encodedData = await encodeToken({ ciphertext, keyName });
 
-  const decryptRequest = (
-    await axios({
-      method: "POST",
-      url: "http://localhost:3001/decrypt",
-      data: { encodedData },
-    })
-  ).data.data;
+  try {
+    const decryptRequest = (await api.post("/decrypt", { encodedData })).data
+      .data;
 
-  return decryptRequest;
+    if (!decryptRequest) {
+      throw new Error("Error decrypting on server.");
+    }
+
+    return decryptRequest;
+  } catch (e) {
+    throw new Error(`${e}`);
+  }
 }

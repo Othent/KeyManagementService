@@ -1,4 +1,4 @@
-import axios from "axios";
+import { api } from "./api";
 import { encodeToken } from "../auth/encodeToken";
 
 export async function encrypt(
@@ -7,13 +7,16 @@ export async function encrypt(
 ): Promise<Uint8Array | string | null> {
   const encodedData = await encodeToken({ plaintext, keyName });
 
-  const encryptRequest = (
-    await axios({
-      method: "POST",
-      url: "http://localhost:3001/encrypt",
-      data: { encodedData },
-    })
-  ).data.data;
+  try {
+    const encryptRequest = (await api.post("/encrypt", { encodedData })).data
+      .data;
 
-  return encryptRequest;
+    if (!encryptRequest) {
+      throw new Error("Error encrypting on server.");
+    }
+
+    return encryptRequest;
+  } catch (e) {
+    throw new Error(`${e}`);
+  }
 }

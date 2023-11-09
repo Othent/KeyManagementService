@@ -1,15 +1,19 @@
-import axios from "axios";
+import { api } from "./api";
+import { encodeToken } from "../auth/encodeToken";
 
-export async function createUser(accessToken: string): Promise<string> {
-  // to do
+export async function createUser(): Promise<any> {
+  const encodedData = await encodeToken({ data: null });
 
-  const createUserRequest = (
-    await axios({
-      method: "POST",
-      url: "http://localhost:3001/create-user",
-      data: { accessToken },
-    })
-  ).data.data;
+  try {
+    const createUserRequest = (await api.post("/create-user", { encodedData }))
+      .data.data;
 
-  return createUserRequest;
+    if (!createUserRequest) {
+      throw new Error("Error creating user on server.");
+    }
+
+    return createUserRequest;
+  } catch (e) {
+    throw new Error(`${e}`);
+  }
 }

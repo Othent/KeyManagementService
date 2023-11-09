@@ -1,16 +1,20 @@
-import axios from "axios";
+import { api } from "./api";
 import { encodeToken } from "../auth/encodeToken";
 
 export async function getPublicKey(keyName: string): Promise<string> {
   const encodedData = await encodeToken({ keyName });
 
-  const getPublicKeyRequest = (
-    await axios({
-      method: "POST",
-      url: "http://localhost:3001/get-public-key",
-      data: { encodedData },
-    })
-  ).data.data;
+  try {
+    const getPublicKeyRequest = (
+      await api.post("/get-public-key", { encodedData })
+    ).data.data;
 
-  return getPublicKeyRequest;
+    if (!getPublicKeyRequest) {
+      throw new Error("Error retrieving public key on server.");
+    }
+
+    return getPublicKeyRequest;
+  } catch (e) {
+    throw new Error(`${e}`);
+  }
 }

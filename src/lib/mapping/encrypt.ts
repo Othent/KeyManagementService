@@ -6,7 +6,9 @@ import { userDetails } from "../auth/userDetails";
  * @param plaintext The data in string format to sign.
  * @returns The encrypted data.
  */
-export async function encrypt(plaintext: string): Promise<any> {
+export async function encrypt(
+  plaintext: string,
+): Promise<Uint8Array | string | null> {
   const user = await userDetails();
 
   const encryptedData = await encryptFunction(plaintext, user.sub);

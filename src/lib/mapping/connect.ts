@@ -9,15 +9,10 @@ import { createUser } from "../operations/createUser";
 export async function connect(): Promise<ConnectReturnType> {
   const user = await login();
 
-  if (user) {
+  if (user.authSystem === "KMS") {
     return user;
   } else {
-    // ignore this for now until sign is finished
-
-    // @ts-ignore
-    const userDetails = await createUser(user);
-
-    // @ts-ignore
+    const userDetails = await createUser();
     return userDetails;
   }
 }

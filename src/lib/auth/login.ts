@@ -1,45 +1,34 @@
 import { jwtDecode } from "jwt-decode";
-import { LoginReturnProps } from "../../types/auth/login";
 import { getAuth0Client, getTokenSilently } from "./auth0";
 import { DecodedJWT } from "../../types/auth/login";
 
-export async function login(): Promise<LoginReturnProps> {
+export async function login(): Promise<any> {
   const auth0 = await getAuth0Client();
   const isAuthenticated = await auth0.isAuthenticated();
 
   const baseOptions = {
     authorizationParams: {
       transaction_input: JSON.stringify({
-        othentFunction: "idToken",
+        othentFunction: "KMS",
       }),
       redirect_uri: window.location.origin,
     },
   };
-
-  function isDecodedJWT(obj: any): obj is DecodedJWT {
-    return obj && typeof obj.contract_id === "string";
-  }
 
   const loginAndGetDecodedJWT = async (
     options: any,
   ): Promise<{ encoded: string; decoded: DecodedJWT }> => {
     await auth0.loginWithPopup(options);
     const authParams = {
-      transaction_input: JSON.stringify({ othentFunction: "idToken" }),
+      transaction_input: JSON.stringify({ othentFunction: "KMS" }),
     };
     const accessToken = await getTokenSilently(auth0, authParams);
     const jwtObj = jwtDecode(accessToken.id_token) as DecodedJWT;
 
-    if (isDecodedJWT(jwtObj)) {
-      return { encoded: accessToken.id_token, decoded: jwtObj };
-    } else {
-      throw new Error("Invalid JWT structure received.");
-    }
+    return { encoded: accessToken.id_token, decoded: jwtObj };
   };
 
-  const processDecodedJWT = async (
-    decoded_JWT: DecodedJWT,
-  ): Promise<LoginReturnProps> => {
+  const processDecodedJWT = async (decoded_JWT: DecodedJWT): Promise<any> => {
     const fieldsToDelete = [
       "nonce",
       "sid",
@@ -63,10 +52,7 @@ export async function login(): Promise<LoginReturnProps> {
       const { decoded } = await loginAndGetDecodedJWT(baseOptions);
       return processDecodedJWT(decoded);
     } catch (error) {
-      console.log(error);
-      throw new Error(
-        "Your browser is blocking us! Please turn off your shields or allow cross site cookies! :)",
-      );
+      throw new Error(`${error}`);
     }
   }
 }
