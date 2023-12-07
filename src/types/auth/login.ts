@@ -1,5 +1,6 @@
 export interface DecodedJWT {
-  wallet_address?: string;
+  walletAddress: string;
+  owner: string;
   given_name: string;
   family_name: string;
   nickname: string;
@@ -20,7 +21,8 @@ export interface DecodedJWT {
 }
 
 export interface LoginReturnProps {
-  wallet_address?: string;
+  walletAddress: string;
+  owner: string;
   given_name: string;
   family_name: string;
   nickname: string;

@@ -1,5 +1,6 @@
 export interface UserDetailsReturnProps {
-  wallet_address?: string;
+  walletAddress: string;
+  owner: string;
   given_name: string;
   family_name: string;
   nickname: string;

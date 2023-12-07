@@ -25,6 +25,8 @@ export async function login(): Promise<any> {
     const accessToken = await getTokenSilently(auth0, authParams);
     const jwtObj = jwtDecode(accessToken.id_token) as DecodedJWT;
 
+    localStorage.setItem("id_token", accessToken.id_token);
+
     return { encoded: accessToken.id_token, decoded: jwtObj };
   };
 
