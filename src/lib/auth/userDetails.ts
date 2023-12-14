@@ -10,7 +10,7 @@ export async function userDetails(): Promise<UserDetailsReturnProps> {
     if (userDetailsString) {
       return JSON.parse(userDetailsString) as UserDetailsReturnProps;
     } else {
-      throw new Error("Error retrieving createUser details.");
+      throw new Error("Error retrieving useDetails.");
     }
   }
 
