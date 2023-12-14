@@ -13,6 +13,7 @@ export async function connect(): Promise<ConnectReturnType> {
     return user;
   } else {
     const userDetails = await createUser();
+    localStorage.setItem("userDetails", JSON.stringify(userDetails));
     return userDetails;
   }
 }

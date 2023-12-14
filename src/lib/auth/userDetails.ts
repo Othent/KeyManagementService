@@ -1,16 +1,24 @@
 import { jwtDecode } from "jwt-decode";
 import { UserDetailsReturnProps } from "../../types/auth/userDetails";
-import { getTokenSilently, getAuth0Client } from "./auth0";
 import { DecodedJWT } from "../../types/auth/login";
 
 export async function userDetails(): Promise<UserDetailsReturnProps> {
-  const auth0 = await getAuth0Client();
-  const authParams = {
-    transaction_input: JSON.stringify({ othentFunction: "idToken" }),
-  };
-  const accessToken = await getTokenSilently(auth0, authParams);
-  const JWT = accessToken.id_token;
-  const decoded_JWT: DecodedJWT = jwtDecode(JWT);
+  const id_token = localStorage.getItem("id_token");
+
+  if (!id_token) {
+    const userDetailsString = localStorage.getItem("userDetails");
+    if (userDetailsString) {
+      return JSON.parse(userDetailsString) as UserDetailsReturnProps;
+    } else {
+      throw new Error("Error retrieving useDetails.");
+    }
+  }
+
+  if (!id_token) {
+    throw new Error("Error retrieving session id_token.");
+  }
+
+  const decoded_JWT: DecodedJWT = jwtDecode(id_token);
   delete decoded_JWT.nonce;
   delete decoded_JWT.sid;
   delete decoded_JWT.aud;

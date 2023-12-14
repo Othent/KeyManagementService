@@ -1,8 +1,7 @@
-import { userDetails } from "../auth/userDetails";
-import { getPublicKey } from "../operations/getPublicKey";
 import { hash } from "../utils/arweaveUtils";
 import { bufferTob64Url } from "../utils/arweaveUtils";
 import { signature as getSignedData } from "./signature";
+import { getActivePublicKey } from "./getActivePublicKey";
 
 /**
  * Sign the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
@@ -10,9 +9,7 @@ import { signature as getSignedData } from "./signature";
  * @returns The signed version of the transaction.
  */
 export async function sign(transaction: any): Promise<any> {
-  const user = await userDetails();
-
-  const owner = await getPublicKey(user.sub);
+  const owner = await getActivePublicKey();
 
   transaction.setOwner(owner);
 
