@@ -6,15 +6,6 @@ export async function userDetails(): Promise<UserDetailsReturnProps> {
   const id_token = localStorage.getItem("id_token");
 
   if (!id_token) {
-    const userDetailsString = localStorage.getItem("userDetails");
-    if (userDetailsString) {
-      return JSON.parse(userDetailsString) as UserDetailsReturnProps;
-    } else {
-      throw new Error("Error retrieving useDetails.");
-    }
-  }
-
-  if (!id_token) {
     throw new Error("Error retrieving session id_token.");
   }
 
