@@ -1,6 +1,6 @@
 {
   "name": "@othent/kms",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Arweave Oauth Othent wallets enabled Google Key Management Service.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
