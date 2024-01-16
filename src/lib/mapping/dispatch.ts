@@ -1,8 +1,8 @@
 import { createData } from "arbundles";
 import Arweave from "arweave";
 
-import { getActivePublicKey } from "../getActivePublicKey";
-import { sign } from "../sign";
+import { getActivePublicKey } from "./getActivePublicKey";
+import { sign } from "./sign";
 import { Transaction } from "arbundles";
 
 export async function dispatch(
