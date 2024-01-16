@@ -1,10 +1,14 @@
 import { createData } from "arbundles";
 import Arweave from "arweave";
-
 import { getActivePublicKey } from "./getActivePublicKey";
 import { sign } from "./sign";
 import { Transaction } from "arbundles";
 
+/**
+ * dispatch the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
+ * @param transaction The transaction to sign.
+ * @returns The signed version of the transaction.
+ */
 export async function dispatch(
   transaction: Transaction,
 ): Promise<{ id: string }> {
