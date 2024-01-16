@@ -1,5 +1,5 @@
 import { expect, test, mock } from "bun:test";
-import { dispatch } from "../src/lib/mapping/dispatch/dispatch";
+import { dispatch } from "../src/lib/mapping/dispatch";
 import Arweave from "arweave";
 
 test("dispatch function", async () => {
