@@ -24,15 +24,8 @@
   "scripts": {
     "build": "npm run prettier && rm -rf ./dist && rollup -c && dts-bundle-generator src/index.ts -o dist/index.d.ts --no-banner",
     "dev": "npm run build && npm link",
-    "test": "jest tests/",
+    "test": "bun test",
     "prettier": "prettier --write ."
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/tests/**/*.ts"
-    ]
   },
   "repository": {
     "type": "git",
@@ -46,6 +39,8 @@
   "homepage": "https://othent.io",
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.1.2",
+    "@types/bun": "^1.0.0",
+    "arbundles": "^0.10.1",
     "axios": "^1.6.0",
     "base64-js": "^1.5.1",
     "buffer": "^6.0.3",
