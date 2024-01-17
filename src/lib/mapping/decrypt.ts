@@ -7,7 +7,7 @@ import { userDetails } from "../auth/userDetails";
  * @returns The decrypted data.
  */
 export async function decrypt(
-  ciphertext: Uint8Array | string | null,
+  ciphertext: Uint8Array | string,
 ): Promise<Uint8Array | string | null> {
   const user = await userDetails();
 
