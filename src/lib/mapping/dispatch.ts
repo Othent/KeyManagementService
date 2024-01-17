@@ -11,6 +11,7 @@ import { Transaction } from "arbundles";
  */
 export async function dispatch(
   transaction: Transaction,
+  node?: string
 ): Promise<{ id: string }> {
   const arweave = new Arweave({});
 
@@ -30,7 +31,11 @@ export async function dispatch(
     // @ts-ignore (incorrect signer type)
     await dataEntry.sign(dataSigner);
 
-    const res = await fetch(`https://node2.irys.xyz//tx`, {
+    if (!node) {
+      node = 'https://turbo.ardrive.io'
+    }
+
+    const res = await fetch(node, {
       method: "POST",
       headers: {
         "Content-Type": "application/octet-stream",
