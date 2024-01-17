@@ -4,7 +4,7 @@ import { encodeToken } from "../auth/encodeToken";
 export async function decrypt(
   ciphertext: Uint8Array | string | null,
   keyName: string,
-): Promise<string> {
+): Promise<Uint8Array | string | null> {
   const encodedData = await encodeToken({ ciphertext, keyName });
 
   try {

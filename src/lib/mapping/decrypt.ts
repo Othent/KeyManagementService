@@ -8,7 +8,7 @@ import { userDetails } from "../auth/userDetails";
  */
 export async function decrypt(
   ciphertext: Uint8Array | string | null,
-): Promise<string> {
+): Promise<Uint8Array | string | null> {
   const user = await userDetails();
 
   const decryptedData = await decryptFunction(ciphertext, user.sub);
