@@ -1,14 +1,14 @@
 import { login } from "../auth/login";
-import { ConnectReturnType } from "../../types/mapping/connect";
 import { createUser } from "../operations/createUser";
 import { getJWT } from "../auth/getJWT";
 import { userDetails } from "../auth/userDetails";
+import { UserDetailsReturnProps } from "../../types/auth/userDetails";
 
 /**
  * Connect the users account, this is the same as login/signup in one function.
  * @returns The the users details.
  */
-export async function connect(): Promise<ConnectReturnType> {
+export async function connect(): Promise<UserDetailsReturnProps> {
   const user = await login();
 
   if (user.authSystem === "KMS" && user.owner && user.walletAddress) {
