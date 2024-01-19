@@ -1,8 +1,7 @@
-import { createData } from "arbundles";
+import { createData, Transaction } from "arbundles";
 import Arweave from "arweave";
 import { getActivePublicKey } from "./getActivePublicKey";
 import { sign } from "./sign";
-import { Transaction } from "arbundles";
 
 /**
  * dispatch the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
@@ -11,7 +10,7 @@ import { Transaction } from "arbundles";
  */
 export async function dispatch(
   transaction: Transaction,
-  node?: string
+  node?: string,
 ): Promise<{ id: string }> {
   const arweave = new Arweave({});
 
@@ -32,7 +31,7 @@ export async function dispatch(
     await dataEntry.sign(dataSigner);
 
     if (!node) {
-      node = 'https://turbo.ardrive.io'
+      node = "https://turbo.ardrive.io";
     }
 
     const res = await fetch(node, {
