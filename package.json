@@ -1,6 +1,6 @@
 {
   "name": "@othent/kms",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Arweave Oauth Othent wallets enabled Google Key Management Service.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -22,17 +22,10 @@
     "README.md"
   ],
   "scripts": {
-    "build": "npm run prettier && rm -rf ./dist && rollup -c && dts-bundle-generator src/index.ts -o dist/index.d.ts --no-banner",
-    "dev": "npm run build && npm link",
-    "test": "jest tests/",
+    "build": "bun run prettier && tsup src/index.ts --format cjs,esm --dts",
+    "dev": "bun run build && bun link",
+    "test": "bun test",
     "prettier": "prettier --write ."
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/tests/**/*.ts"
-    ]
   },
   "repository": {
     "type": "git",
@@ -46,23 +39,24 @@
   "homepage": "https://othent.io",
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.1.2",
+    "@irys/arweave": "^0.0.2",
+    "arweave": "^1.14.4",
     "axios": "^1.6.0",
     "base64-js": "^1.5.1",
+    "base64url": "^3.0.1",
     "buffer": "^6.0.3",
     "jwk-to-pem": "^2.0.5",
     "jwt-decode": "^4.0.0",
-    "pem-jwk": "^2.0.0"
+    "pem-jwk": "^2.0.0",
+    "tmp-promise": "^3.0.3"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^24.1.0",
-    "@rollup/plugin-terser": "^0.4.1",
-    "@rollup/plugin-typescript": "^11.1.0",
+    "tsup": "^8.0.1",
+    "@types/bun": "^1.0.2",
     "@types/jwk-to-pem": "^2.0.1",
     "@types/node": "^20.2.5",
     "@types/pem-jwk": "^2.0.1",
-    "dts-bundle-generator": "^8.0.1",
     "prettier": "^3.0.3",
-    "rollup": "^3.21.6",
     "ts-jest": "^29.1.1",
     "tslib": "^2.5.0",
     "typescript": "^5.0.4"

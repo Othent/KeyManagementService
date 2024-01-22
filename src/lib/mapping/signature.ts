@@ -8,7 +8,7 @@ import { Buffer } from "buffer";
  * @returns The {@linkcode Buffer} format of the signature.
  */
 export async function signature(
-  data: Uint8Array | string | null,
+  data: Uint8Array | string | null | ArrayBuffer,
 ): Promise<Buffer> {
   const user = await userDetails();
 
