@@ -39,17 +39,20 @@
   "homepage": "https://othent.io",
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.1.2",
-    "@types/bun": "^1.0.2",
-    "arbundles": "^0.10.1",
+    "@irys/arweave": "^0.0.2",
+    "arweave": "^1.14.4",
     "axios": "^1.6.0",
     "base64-js": "^1.5.1",
+    "base64url": "^3.0.1",
     "buffer": "^6.0.3",
     "jwk-to-pem": "^2.0.5",
     "jwt-decode": "^4.0.0",
     "pem-jwk": "^2.0.0",
-    "tsup": "^8.0.1"
+    "tmp-promise": "^3.0.3"
   },
   "devDependencies": {
+    "tsup": "^8.0.1",
+    "@types/bun": "^1.0.2",
     "@types/jwk-to-pem": "^2.0.1",
     "@types/node": "^20.2.5",
     "@types/pem-jwk": "^2.0.1",

@@ -1,7 +1,7 @@
-import { createData, Transaction } from "arbundles";
-import Arweave from "arweave";
 import { getActivePublicKey } from "./getActivePublicKey";
 import { sign } from "./sign";
+import { createAndSignData } from "../operations/createAndSignData";
+import { userDetails } from "../auth/userDetails";
 
 /**
  * dispatch the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
@@ -9,11 +9,10 @@ import { sign } from "./sign";
  * @returns The signed version of the transaction.
  */
 export async function dispatch(
-  transaction: Transaction,
+  transaction: any,
   node?: string,
+  Arweave?: any,
 ): Promise<{ id: string }> {
-  const arweave = new Arweave({});
-
   const owner = await getActivePublicKey();
 
   const data = transaction.get("data", { decode: true, string: false });
@@ -24,11 +23,9 @@ export async function dispatch(
   }));
 
   try {
-    const dataSigner = { sign, publicKey: owner };
-    // @ts-ignore (incorrect signer type)
-    const dataEntry = createData(data, dataSigner, { tags });
-    // @ts-ignore (incorrect signer type)
-    await dataEntry.sign(dataSigner);
+    const user = await userDetails();
+
+    const dataEntry = await createAndSignData(data, user.sub, owner, tags);
 
     if (!node) {
       node = "https://turbo.ardrive.io";
@@ -39,7 +36,7 @@ export async function dispatch(
       headers: {
         "Content-Type": "application/octet-stream",
       },
-      body: dataEntry.getRaw(),
+      body: dataEntry.raw,
     });
 
     if (res.status >= 400) {
@@ -52,6 +49,11 @@ export async function dispatch(
       id: dataEntry.id,
     };
   } catch {
+    const arweave = Arweave.init({
+      host: "arweave.net",
+      protocol: "https",
+      port: 443,
+    });
     await sign(transaction);
     const uploader = await arweave.transactions.getUploader(transaction);
     while (!uploader.isComplete) {
