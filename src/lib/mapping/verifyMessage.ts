@@ -13,7 +13,9 @@ export async function verifyMessage(
 
   const binarySignature = new Uint8Array(signature);
 
-  const hash = await crypto.subtle.digest(options.hashAlgorithm, dataToVerify);
+  const hash = new Uint8Array(
+    await crypto.subtle.digest(options.hashAlgorithm, dataToVerify),
+  );
 
   const publicJWK: JsonWebKey = {
     e: "AQAB",

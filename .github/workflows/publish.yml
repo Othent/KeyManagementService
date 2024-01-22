@@ -21,6 +21,10 @@ jobs:
           registry-url: https://registry.npmjs.org
         env:
           envFile: .env
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "PATH=$HOME/.bun/bin:$PATH" >> $GITHUB_ENV
       - name: 📦 install dependencies
         run: npm install
       - name: 📝 build
