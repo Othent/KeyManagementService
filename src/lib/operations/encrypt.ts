@@ -2,7 +2,7 @@ import { api } from "./api";
 import { encodeToken } from "../auth/encodeToken";
 
 export async function encrypt(
-  plaintext: Uint8Array | string | null,
+  plaintext: Uint8Array | string,
   keyName: string,
 ): Promise<Uint8Array | string | null> {
   const encodedData = await encodeToken({ plaintext, keyName });

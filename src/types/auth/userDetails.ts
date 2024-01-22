@@ -1,4 +1,5 @@
 export interface UserDetailsReturnProps {
+  authSystem?: string;
   walletAddress: string;
   owner: string;
   given_name: string;
@@ -9,7 +10,7 @@ export interface UserDetailsReturnProps {
   locale: string;
   updated_at?: string;
   email: string;
-  email_verified: string;
+  email_verified: boolean;
   sub: string;
   iss?: string;
   aud?: string;
