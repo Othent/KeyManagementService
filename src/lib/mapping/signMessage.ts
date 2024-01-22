@@ -11,7 +11,9 @@ export async function signMessage(
 ): Promise<number[]> {
   const dataToSign = new Uint8Array(data);
 
-  const hash = await crypto.subtle.digest(options.hashAlgorithm, dataToSign);
+  const hash = new Uint8Array(
+    await crypto.subtle.digest(options.hashAlgorithm, dataToSign),
+  );
 
   const signedMessage = await signature(hash);
 
