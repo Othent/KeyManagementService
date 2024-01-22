@@ -7,7 +7,7 @@ import { userDetails } from "../auth/userDetails";
  * @returns The encrypted data.
  */
 export async function encrypt(
-  plaintext: Uint8Array | string
+  plaintext: Uint8Array | string,
 ): Promise<Uint8Array | string | null> {
   const user = await userDetails();
 
