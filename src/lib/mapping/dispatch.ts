@@ -1,9 +1,10 @@
 import { Buffer } from "buffer";
-import { getActivePublicKey } from "./getActivePublicKey";
 import { sign as signFunction } from "./sign";
+import { signature } from "./signature";
 import Transaction from "arweave/web/lib/transaction";
 import { createData, Signer } from "warp-arbundles";
 import { toBuffer } from "../utils/bufferUtils";
+import { userDetails } from "../auth/userDetails";
 
 /**
  * dispatch the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
@@ -15,7 +16,7 @@ export async function dispatch(
   node?: string,
   arweave?: any,
 ): Promise<{ id: string }> {
-  const owner = await getActivePublicKey();
+  const user = await userDetails();
 
   const data = transaction.get("data", { decode: true, string: false });
   // @ts-expect-error
@@ -24,9 +25,14 @@ export async function dispatch(
     value: tag.get("value", { decode: true, string: true }),
   }));
 
+  async function sign(message: Uint8Array) {
+    const signedData = await signature(message);
+    return signedData;
+  }
+
   const signer: Signer = {
     // @ts-ignore
-    publicKey: getPublicKey(owner),
+    publicKey: getPublicKey(user.owner),
     signatureType: 1,
     signatureLength: 512,
     ownerLength: 512,
@@ -65,7 +71,7 @@ export async function dispatch(
 
     return {
       // @ts-ignore
-      id: dataEntry.id,
+      id: await dataEntry.id,
     };
   } catch {
     await signFunction(transaction);
@@ -77,11 +83,6 @@ export async function dispatch(
       id: transaction.id,
     };
   }
-}
-
-async function sign(message: Uint8Array) {
-  const signedData = await signFunction(message);
-  return signedData.data;
 }
 
 function getPublicKey(owner: string) {
