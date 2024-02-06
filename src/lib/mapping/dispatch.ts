@@ -1,9 +1,10 @@
-import { getActivePublicKey } from "./getActivePublicKey";
-import { sign } from "./sign";
-import { createAndSignData } from "../operations/createAndSignData";
-import { userDetails } from "../auth/userDetails";
-import Transaction from "arweave/web/lib/transaction";
 import { Buffer } from "buffer";
+import { sign as signFunction } from "./sign";
+import { signature } from "./signature";
+import Transaction from "arweave/web/lib/transaction";
+import { createData, Signer } from "warp-arbundles";
+import { toBuffer } from "../utils/bufferUtils";
+import { userDetails } from "../auth/userDetails";
 
 /**
  * dispatch the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
@@ -15,7 +16,7 @@ export async function dispatch(
   node?: string,
   arweave?: any,
 ): Promise<{ id: string }> {
-  const owner = await getActivePublicKey();
+  const user = await userDetails();
 
   const data = transaction.get("data", { decode: true, string: false });
   // @ts-expect-error
@@ -24,11 +25,32 @@ export async function dispatch(
     value: tag.get("value", { decode: true, string: true }),
   }));
 
+  async function sign(message: Uint8Array) {
+    const signedData = await signature(message);
+    return signedData;
+  }
+
+  const signer: Signer = {
+    // @ts-ignore
+    publicKey: getPublicKey(user.owner),
+    signatureType: 1,
+    signatureLength: 512,
+    ownerLength: 512,
+    // @ts-ignore
+    sign,
+    // @ts-ignore
+    verify: null,
+  };
+
+  const dataEntry = createData(data, signer, { tags });
+
   try {
-    const user = await userDetails();
+    await dataEntry.sign(signer);
+  } catch (error) {
+    console.log(error);
+  }
 
-    const dataEntry = await createAndSignData(data, user.sub, owner, tags);
-
+  try {
     if (!node) {
       node = "https://turbo.ardrive.io";
     }
@@ -38,7 +60,7 @@ export async function dispatch(
       headers: {
         "Content-Type": "application/octet-stream",
       },
-      body: Buffer.from(dataEntry.raw),
+      body: Buffer.from(dataEntry.getRaw()),
     });
 
     if (res.status >= 400) {
@@ -48,10 +70,11 @@ export async function dispatch(
     }
 
     return {
-      id: dataEntry.id,
+      // @ts-ignore
+      id: await dataEntry.id,
     };
   } catch {
-    await sign(transaction);
+    await signFunction(transaction);
     const uploader = await arweave.transactions.getUploader(transaction);
     while (!uploader.isComplete) {
       await uploader.uploadChunk();
@@ -60,4 +83,8 @@ export async function dispatch(
       id: transaction.id,
     };
   }
+}
+
+function getPublicKey(owner: string) {
+  return toBuffer(owner);
 }

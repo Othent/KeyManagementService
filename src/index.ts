@@ -13,3 +13,6 @@ export * from "./lib/mapping/signMessage";
 export * from "./lib/mapping/verifyMessage";
 // types
 export * from "./types/mapping/connect";
+
+import { Buffer } from "buffer";
+window.Buffer = Buffer;

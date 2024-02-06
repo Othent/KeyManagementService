@@ -1,6 +1,6 @@
 {
   "name": "@othent/kms",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Arweave Oauth Othent wallets enabled Google Key Management Service.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -39,16 +39,15 @@
   "homepage": "https://othent.io",
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.1.2",
-    "Buffer": "^0.0.0",
     "arweave": "^1.14.4",
     "axios": "^1.6.0",
     "base64-js": "^1.5.1",
-    "base64url": "^3.0.1",
     "buffer": "^6.0.3",
     "jwk-to-pem": "^2.0.5",
     "jwt-decode": "^4.0.0",
     "pem-jwk": "^2.0.0",
-    "tmp-promise": "^3.0.3"
+    "tmp-promise": "^3.0.3",
+    "warp-arbundles": "^1.0.4"
   },
   "devDependencies": {
     "tsup": "^8.0.1",
