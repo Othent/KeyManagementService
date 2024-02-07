@@ -46,8 +46,7 @@
     "jwk-to-pem": "^2.0.5",
     "jwt-decode": "^4.0.0",
     "pem-jwk": "^2.0.0",
-    "tmp-promise": "^3.0.3",
-    "warp-arbundles": "^1.0.4"
+    "tmp-promise": "^3.0.3"
   },
   "devDependencies": {
     "tsup": "^8.0.1",
