@@ -1,5 +1,5 @@
 {
-  "name": "@othent/kms",
+  "name": "@othent/kms-aftr",
   "version": "1.0.8",
   "description": "Arweave Oauth Othent wallets enabled Google Key Management Service.",
   "main": "dist/index.js",
