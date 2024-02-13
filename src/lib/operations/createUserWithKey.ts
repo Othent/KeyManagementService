@@ -12,11 +12,11 @@ export async function createUserWithKey(): Promise<any> {
 
   const encryptedKey = encryptKey(pem, formattedKey);
 
-  const encodedData = await encodeToken({ encryptedKey });
+  const encodedData = await encodeToken({ importedKey: encryptedKey });
 
   try {
     const createUserRequest = (
-      await api.post("/create-user-with-key", { encodedData })
+      await api.post("/create-user", { encodedData })
     ).data.data;
 
     if (!createUserRequest) {
