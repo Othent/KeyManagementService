@@ -19,4 +19,5 @@ export interface UserDetailsReturnProps {
   sid?: string;
   nonce?: string;
   data?: any;
+  mnemonicSeedPhrase?: any;
 }
