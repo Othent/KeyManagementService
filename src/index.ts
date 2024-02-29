@@ -11,6 +11,7 @@ export * from "./lib/mapping/signature";
 export * from "./lib/mapping/dispatch";
 export * from "./lib/mapping/signMessage";
 export * from "./lib/mapping/verifyMessage";
+export * from "./lib/mapping/signDataItem";
 // types
 export * from "./types/mapping/connect";
 
