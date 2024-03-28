@@ -15,15 +15,20 @@ export async function dispatch(
   transaction: Transaction,
   node?: string,
   arweave?: any,
+  analyticsTags?: { name: string; value: string }[]
 ): Promise<{ id: string }> {
   const user = await userDetails();
 
   const data = transaction.get("data", { decode: true, string: false });
   // @ts-expect-error
-  const tags = (transaction.get("tags") as Tag[]).map((tag) => ({
+  let tags = (transaction.get("tags") as Tag[]).map((tag) => ({
     name: tag.get("name", { decode: true, string: true }),
     value: tag.get("value", { decode: true, string: true }),
   }));
+
+  if (analyticsTags) {
+    tags = [...tags, ...analyticsTags];
+  }
 
   async function sign(message: Uint8Array) {
     const signedData = await signature(message);
