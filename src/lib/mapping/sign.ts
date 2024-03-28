@@ -8,10 +8,16 @@ import { getActivePublicKey } from "./getActivePublicKey";
  * @param transaction The transaction to sign.
  * @returns The signed version of the transaction.
  */
-export async function sign(transaction: any): Promise<any> {
+export async function sign(transaction: any, analyticsTags?: { name: string; value: string }[]): Promise<any> {
   const owner = await getActivePublicKey();
 
   transaction.setOwner(owner);
+
+  if (analyticsTags) {  
+    for (const tag of analyticsTags) {
+      transaction.addTag(tag.name, tag.value);
+    }
+  }
 
   const dataToSign = await transaction.getSignatureData();
 
