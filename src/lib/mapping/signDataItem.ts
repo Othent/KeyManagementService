@@ -1,7 +1,6 @@
 import { signature } from "./signature";
 import { createData, Signer, DataItemCreateOptions } from "warp-arbundles";
-import { toBuffer } from "../utils/bufferUtils";
-import { userDetails } from "../auth/userDetails";
+import { getCachedUserPublicKeyBuffer } from "../auth/auth0";
 
 /**
  * The signDataItem() function allows you to create and sign a data item object, compatible with arbundles. These data items can then be submitted to an ANS-104 compatible bundler.
@@ -9,7 +8,9 @@ import { userDetails } from "../auth/userDetails";
  * @returns The signed data item.
  */
 export async function signDataItem(dataItem: SignDataItemParams) {
-  const user = await userDetails();
+  const publicKeyBuffer = getCachedUserPublicKeyBuffer();
+
+  if (!publicKeyBuffer) throw new Error("Missing cached user.");
 
   const { data, ...options } = dataItem;
 
@@ -19,15 +20,12 @@ export async function signDataItem(dataItem: SignDataItemParams) {
   }
 
   const signer: Signer = {
-    // @ts-ignore
-    publicKey: getPublicKey(user.owner),
+    publicKey: publicKeyBuffer,
     signatureType: 1,
     signatureLength: 512,
     ownerLength: 512,
-    // @ts-ignore
     sign,
-    // @ts-ignore
-    verify: null,
+    // verify: null,
   };
 
   const dataEntry = createData(data, signer, options);
@@ -43,8 +41,4 @@ export async function signDataItem(dataItem: SignDataItemParams) {
 
 export interface SignDataItemParams extends DataItemCreateOptions {
   data: string | Uint8Array;
-}
-
-function getPublicKey(owner: string) {
-  return toBuffer(owner);
 }

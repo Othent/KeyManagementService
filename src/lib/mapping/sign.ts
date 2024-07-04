@@ -1,19 +1,27 @@
 import { hash } from "../utils/arweaveUtils";
 import { bufferTob64Url } from "../utils/arweaveUtils";
 import { signature as getSignedData } from "./signature";
-import { getActivePublicKey } from "./getActivePublicKey";
+import type Transaction from "arweave/web/lib/transaction";
+import { getCachedUserPublicKey } from "../auth/auth0";
+
+// TODO: Rename to signTransaction
 
 /**
  * Sign the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
  * @param transaction The transaction to sign.
  * @returns The signed version of the transaction.
  */
-export async function sign(transaction: any, analyticsTags?: { name: string; value: string }[]): Promise<any> {
-  const owner = await getActivePublicKey();
+export async function sign(
+  transaction: Transaction,
+  analyticsTags?: { name: string; value: string }[],
+): Promise<Transaction> {
+  const publicKey = getCachedUserPublicKey();
 
-  transaction.setOwner(owner);
+  if (!publicKey) throw new Error("Missing cached user.");
 
-  if (analyticsTags) {  
+  transaction.setOwner(publicKey);
+
+  if (analyticsTags) {
     for (const tag of analyticsTags) {
       transaction.addTag(tag.name, tag.value);
     }
@@ -25,10 +33,9 @@ export async function sign(transaction: any, analyticsTags?: { name: string; val
 
   let id = await hash(signature);
 
-  // @ts-ignore
   transaction.setSignature({
     id: bufferTob64Url(id),
-    owner: owner,
+    owner: publicKey,
     signature: bufferTob64Url(signature),
   });
 

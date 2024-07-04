@@ -1,22 +1,27 @@
 import { login } from "../auth/login";
 import { createUser } from "../operations/createUser";
-import { getJWT } from "../auth/getJWT";
-import { userDetails } from "../auth/userDetails";
 import { UserDetailsReturnProps } from "../../types/auth/userDetails";
+import { getCachedUserDetails } from "../auth/auth0";
+import { isUserValid } from "../auth/validateUser";
+import { reconnect } from "../auth/reconnect";
 
 /**
  * Connect the users account, this is the same as login/signup in one function.
  * @returns The the users details.
  */
 export async function connect(): Promise<UserDetailsReturnProps> {
-  const user = await login();
+  console.log("CONNECT");
 
-  if (user.authSystem === "KMS" && user.owner && user.walletAddress) {
-    return user;
-  } else {
-    await createUser();
-    const userDetailsJWT = await getJWT();
-    localStorage.setItem("id_token", JSON.stringify(userDetailsJWT));
-    return await userDetails();
-  }
+  const user = await reconnect();
+
+  if (user) return user;
+
+  const newUser = await login();
+
+  if (isUserValid(newUser)) return newUser;
+
+  await createUser();
+
+  // localStorage.setItem("id_token", JSON.stringify(userDetailsJWT));
+  return getCachedUserDetails()!;
 }

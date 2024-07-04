@@ -1,5 +1,5 @@
+import { getCachedUserSub } from "../auth/auth0";
 import { encrypt as encryptFunction } from "../operations/encrypt";
-import { userDetails } from "../auth/userDetails";
 
 /**
  * Encrypt data with the users JWK. This function assumes (and requires) a user is logged in and a valid string to sign.
@@ -9,9 +9,11 @@ import { userDetails } from "../auth/userDetails";
 export async function encrypt(
   plaintext: Uint8Array | string,
 ): Promise<Uint8Array | string | null> {
-  const user = await userDetails();
+  const sub = getCachedUserSub();
 
-  const encryptedData = await encryptFunction(plaintext, user.sub);
+  if (!sub) throw new Error("Missing cached user.");
+
+  const encryptedData = await encryptFunction(plaintext, sub);
 
   return encryptedData;
 }

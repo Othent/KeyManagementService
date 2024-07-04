@@ -6,9 +6,12 @@ import { signature } from "./signature";
  * @returns The signed version of the message.
  */
 export async function signMessage(
-  data: any,
+  data: Uint8Array,
   options = { hashAlgorithm: "SHA-256" },
 ): Promise<number[]> {
+  // TODO: Make data: Uint8Array | string | null | ArrayBuffer?
+  // TODO: Use TextEncoder here rather than making users use it manually?
+  
   const dataToSign = new Uint8Array(data);
 
   const hash = new Uint8Array(
@@ -17,5 +20,6 @@ export async function signMessage(
 
   const signedMessage = await signature(hash);
 
+  // TODO: Why did we chose to return an array instead of the Buffer?
   return Array.from(new Uint8Array(signedMessage));
 }

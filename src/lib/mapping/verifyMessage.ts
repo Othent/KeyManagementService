@@ -4,8 +4,8 @@
  * @returns The signed version of the message.
  */
 export async function verifyMessage(
-  data: any,
-  signature: any,
+  data: Uint8Array,
+  signature: number[],
   publicKey: string,
   options = { hashAlgorithm: "SHA-256" },
 ): Promise<boolean> {

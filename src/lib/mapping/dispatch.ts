@@ -1,10 +1,13 @@
 import { Buffer } from "buffer";
 import { sign as signFunction } from "./sign";
 import { signature } from "./signature";
-import Transaction from "arweave/web/lib/transaction";
+import type Transaction from "arweave/web/lib/transaction";
 import { createData, Signer } from "warp-arbundles";
-import { toBuffer } from "../utils/bufferUtils";
-import { userDetails } from "../auth/userDetails";
+import type Arweave from "arweave/web";
+import {
+  getCachedUserPublicKey,
+  getCachedUserPublicKeyBuffer,
+} from "../auth/auth0";
 
 /**
  * dispatch the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
@@ -13,12 +16,10 @@ import { userDetails } from "../auth/userDetails";
  */
 export async function dispatch(
   transaction: Transaction,
+  arweave: Arweave,
   node?: string,
-  arweave?: any,
-  analyticsTags?: { name: string; value: string }[]
+  analyticsTags?: { name: string; value: string }[],
 ): Promise<{ id: string }> {
-  const user = await userDetails();
-
   const data = transaction.get("data", { decode: true, string: false });
   // @ts-expect-error
   let tags = (transaction.get("tags") as Tag[]).map((tag) => ({
@@ -35,16 +36,17 @@ export async function dispatch(
     return signedData;
   }
 
+  const publicKeyBuffer = getCachedUserPublicKeyBuffer();
+
+  if (!publicKeyBuffer) throw new Error("Missing cached user.");
+
   const signer: Signer = {
-    // @ts-ignore
-    publicKey: getPublicKey(user.owner),
+    publicKey: publicKeyBuffer,
     signatureType: 1,
     signatureLength: 512,
     ownerLength: 512,
-    // @ts-ignore
     sign,
-    // @ts-ignore
-    verify: null,
+    // verify: null,
   };
 
   const dataEntry = createData(data, signer, { tags });
@@ -56,6 +58,7 @@ export async function dispatch(
   }
 
   try {
+    // TODO: Try with a bunch of different nodes?
     if (!node) {
       node = "https://turbo.ardrive.io";
     }
@@ -80,6 +83,8 @@ export async function dispatch(
     };
   } catch {
     await signFunction(transaction);
+    // TODO: Why uploader and not just post? When to use one or the other, as they seem
+    // to overlap in some cases?
     const uploader = await arweave.transactions.getUploader(transaction);
     while (!uploader.isComplete) {
       await uploader.uploadChunk();
@@ -88,8 +93,4 @@ export async function dispatch(
       id: transaction.id,
     };
   }
-}
-
-function getPublicKey(owner: string) {
-  return toBuffer(owner);
 }

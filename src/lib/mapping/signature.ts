@@ -1,5 +1,5 @@
+import { getCachedUserSub } from "../auth/auth0";
 import { sign as signFunction } from "../operations/sign";
-import { userDetails } from "../auth/userDetails";
 import { Buffer } from "buffer";
 
 /**
@@ -10,9 +10,12 @@ import { Buffer } from "buffer";
 export async function signature(
   data: Uint8Array | string | null | ArrayBuffer,
 ): Promise<Buffer> {
-  const user = await userDetails();
+  const sub = getCachedUserSub();
 
-  const response = await signFunction(data, user.sub);
+  if (!sub) throw new Error("Missing cached user.");
+
+  // TODO: Does the signFunction actually work with Uint8Array | string | null | ArrayBuffer?
+  const response = await signFunction(data, sub);
 
   const rawSignature = Buffer.from(response.data);
 

@@ -3,33 +3,17 @@ import { getAuth0Client, getTokenSilently } from "./auth0";
 import { DecodedJWT } from "../../types/auth/login";
 
 export async function login(): Promise<any> {
+  console.log("LOGIN");
+
   const auth0 = await getAuth0Client();
   const isAuthenticated = await auth0.isAuthenticated();
 
-  const baseOptions = {
-    authorizationParams: {
-      transaction_input: JSON.stringify({
-        othentFunction: "KMS",
-      }),
-      redirect_uri: window.location.origin,
-    },
-  };
+  console.log("login.isAuthenticated =", isAuthenticated);
 
-  const loginAndGetDecodedJWT = async (
-    options: any,
-  ): Promise<{ encoded: string; decoded: DecodedJWT }> => {
-    await auth0.loginWithPopup(options);
-    const authParams = {
-      transaction_input: JSON.stringify({ othentFunction: "KMS" }),
-    };
-    const accessToken = await getTokenSilently(auth0, authParams);
-    const jwtObj = jwtDecode(accessToken.id_token) as DecodedJWT;
+  if (isAuthenticated) return null;
 
-    localStorage.setItem("id_token", accessToken.id_token);
-
-    return { encoded: accessToken.id_token, decoded: jwtObj };
-  };
-
+  // TODO: This seems to be duplicated with what's inside userDetails:
+  /*
   const processDecodedJWT = async (decoded_JWT: DecodedJWT): Promise<any> => {
     const fieldsToDelete = [
       "nonce",
@@ -45,16 +29,29 @@ export async function login(): Promise<any> {
     );
     return decoded_JWT;
   };
+  */
 
-  if (isAuthenticated) {
-    const { decoded } = await loginAndGetDecodedJWT(baseOptions);
-    return processDecodedJWT(decoded);
-  } else {
-    try {
-      const { decoded } = await loginAndGetDecodedJWT(baseOptions);
-      return processDecodedJWT(decoded);
-    } catch (error) {
-      throw new Error(`${error}`);
-    }
+  try {
+    console.log("loginWithPopup");
+
+    // TODO: Missing try-catch if the modal is closed.
+    await auth0.loginWithPopup({
+      authorizationParams: {
+        transaction_input: JSON.stringify({
+          othentFunction: "KMS",
+        }),
+        redirect_uri: window.location.origin,
+      },
+    });
+
+    const accessToken = await getTokenSilently(auth0);
+    const jwtObj = jwtDecode(accessToken.id_token) as DecodedJWT;
+    // localStorage.setItem("id_token", accessToken.id_token);
+
+    return jwtObj;
+  } catch (error) {
+    console.log(error);
+
+    throw new Error(`${error}`);
   }
 }
