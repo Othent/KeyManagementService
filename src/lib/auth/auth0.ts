@@ -15,8 +15,8 @@ let auth0Client: Auth0Client | null = null;
 export async function getAuth0Client(): Promise<Auth0Client> {
   if (!auth0Client) {
     const newAuth0Client = await createAuth0Client({
-      domain: "auth.othent.io",
-      clientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
+      domain: process.env.auth0ClientDomain || "auth.othent.io",
+      clientId: process.env.auth0ClientId || "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
       // useRefreshTokens: true,
       authorizationParams: {
         redirect_uri: window.location.origin,

@@ -18,7 +18,13 @@ export async function connect(): Promise<UserDetailsReturnProps> {
 
   const newUser = await login();
 
-  if (isUserValid(newUser)) return newUser;
+  if (newUser && isUserValid(newUser)) {
+    console.log("User already existed in KMS.");
+
+    return newUser;
+  }
+
+  console.log("Creating new KMS user.");
 
   await createUser();
 

@@ -1,5 +1,5 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://kms-server.othent.io",
+  baseURL: process.env.kmsServerBaseUrl || "https://kms-server.othent.io",
 });

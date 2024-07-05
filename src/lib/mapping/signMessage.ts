@@ -11,7 +11,7 @@ export async function signMessage(
 ): Promise<number[]> {
   // TODO: Make data: Uint8Array | string | null | ArrayBuffer?
   // TODO: Use TextEncoder here rather than making users use it manually?
-  
+
   const dataToSign = new Uint8Array(data);
 
   const hash = new Uint8Array(

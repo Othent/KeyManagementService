@@ -15,3 +15,7 @@ Please find code examples on how to use this package at https://github.com/Othen
 - Are we sending the whole file to Auth0 to include it in a JWT? Wouldn't it make more sense to include only a hash and verify it on the server?
 
 - React-specific hook library/SDK (e.g. Wagmi)?
+
+- Maybe the Auth0 env variables and server URLs should be provided as options when instantiating OthentKMS (in case some projects want to self-host).
+
+- Create a JIRA task to migrate Rules to Actions.

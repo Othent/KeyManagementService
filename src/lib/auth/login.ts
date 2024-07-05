@@ -1,18 +1,25 @@
 import { jwtDecode } from "jwt-decode";
 import { getAuth0Client, getTokenSilently } from "./auth0";
 import { DecodedJWT } from "../../types/auth/login";
+import { UserDetailsReturnProps } from "../../types/auth/userDetails";
 
-export async function login(): Promise<any> {
+export async function login(): Promise<DecodedJWT | UserDetailsReturnProps | null> {
   console.log("LOGIN");
+
+  // TODO: Prevent multiple calls here?
 
   const auth0 = await getAuth0Client();
   const isAuthenticated = await auth0.isAuthenticated();
 
   console.log("login.isAuthenticated =", isAuthenticated);
 
+  // TODO: Throw an error instead as this should never happen.
   if (isAuthenticated) return null;
 
   // TODO: This seems to be duplicated with what's inside userDetails:
+
+  // TODO: Also review what's the relationship between these and the privatization Rule in Auth0.
+
   /*
   const processDecodedJWT = async (decoded_JWT: DecodedJWT): Promise<any> => {
     const fieldsToDelete = [
@@ -45,7 +52,7 @@ export async function login(): Promise<any> {
     });
 
     const accessToken = await getTokenSilently(auth0);
-    const jwtObj = jwtDecode(accessToken.id_token) as DecodedJWT;
+    const jwtObj = jwtDecode(accessToken.id_token) as DecodedJWT | UserDetailsReturnProps;
     // localStorage.setItem("id_token", accessToken.id_token);
 
     return jwtObj;

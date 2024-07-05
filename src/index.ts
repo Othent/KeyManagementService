@@ -19,3 +19,9 @@ export * from "./types/mapping/connect";
 
 import { Buffer } from "buffer";
 window.Buffer = Buffer;
+
+
+// Break the build if the env variables are missing:
+if (!process.env.auth0ClientDomain || !process.env.auth0ClientId || !process.env.kmsServerBaseUrl) {
+    process.exit(1);
+}
