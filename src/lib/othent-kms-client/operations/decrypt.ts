@@ -1,11 +1,13 @@
-import { api } from "./api";
-import { encodeToken } from "../auth/encodeToken";
+import { AxiosInstance } from "axios";
+import { OthentAuth0Client } from "../../auth/auth0";
 
 export async function decrypt(
-  ciphertext: Uint8Array | string,
+  api: AxiosInstance,
+  auth0: OthentAuth0Client,
+  ciphertext: string,
   keyName: string,
 ): Promise<Uint8Array | string | null> {
-  const encodedData = await encodeToken({ ciphertext, keyName });
+  const encodedData = await auth0.encodeToken({ ciphertext, keyName });
 
   try {
     const decryptRequest = (await api.post("/decrypt", { encodedData })).data

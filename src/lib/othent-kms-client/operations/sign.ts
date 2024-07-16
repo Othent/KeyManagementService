@@ -1,8 +1,13 @@
-import { api } from "./api";
-import { encodeToken } from "../auth/encodeToken";
+import { AxiosInstance } from "axios";
+import { OthentAuth0Client } from "../../auth/auth0";
 
-export async function sign(data: any, keyName: string): Promise<any> {
-  const encodedData = await encodeToken({ data, keyName });
+export async function sign(
+  api: AxiosInstance,
+  auth0: OthentAuth0Client,
+  data: string,
+  keyName: string,
+): Promise<any> {
+  const encodedData = await auth0.encodeToken({ data, keyName });
 
   try {
     const signRequest = (await api.post("/sign", { encodedData })).data;

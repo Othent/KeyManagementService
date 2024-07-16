@@ -2,6 +2,22 @@ import * as B64js from "base64-js";
 
 export type Base64UrlString = string;
 
+export type TypedArray =
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  // | Float16Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array;
+
+export type BinaryDataType = ArrayBuffer | TypedArray | DataView;
+
 export function concatBuffers(
   buffers: Uint8Array[] | ArrayBuffer[],
 ): Uint8Array {
@@ -31,7 +47,7 @@ export function b64UrlToString(b64UrlString: string): string {
   return bufferToString(buffer);
 }
 
-export function bufferToString(buffer: Uint8Array | ArrayBuffer): string {
+export function bufferToString(buffer: BinaryDataType): string {
   return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
 }
 
