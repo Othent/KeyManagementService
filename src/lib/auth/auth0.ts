@@ -1,4 +1,4 @@
-import { Auth0Client, createAuth0Client } from "@auth0/auth0-spa-js";
+import { Auth0Client, CacheLocation, createAuth0Client } from "@auth0/auth0-spa-js";
 import { toBuffer } from "../utils/bufferUtils";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -7,6 +7,7 @@ import {
   CryptoOperationData,
   AuthorizationParams,
   AuthorizationParamsWithTransactionInput,
+  Auth0Strategy,
 } from "./auth0.types";
 
 export class OthentAuth0Client {
@@ -59,13 +60,20 @@ export class OthentAuth0Client {
     } satisfies AuthorizationParamsWithTransactionInput;
   }
 
-  constructor(domain: string, clientId: string, useRefreshTokens = false) {
+  constructor(domain: string, clientId: string, strategy: Auth0Strategy) {
     // TODO: Should we be able to provide `userDetails` from a cookie or localStorage or whatever?
+
+    const useRefreshTokens = strategy !== 'iframe-cookies';
+    const cacheLocation: CacheLocation | undefined = (useRefreshTokens ? strategy.replace('refresh-', '') : "memory") as CacheLocation;
+
+    console.log('useRefreshTokens =', useRefreshTokens);
+    console.log('   cacheLocation =', cacheLocation);
 
     this.auth0ClientPromise = createAuth0Client({
       domain,
       clientId,
       useRefreshTokens,
+      cacheLocation,
       authorizationParams: {
         redirect_uri: window.location.origin,
         // scope: "openid profile email offline_access"
@@ -139,7 +147,7 @@ export class OthentAuth0Client {
     console.log("login.isAuthenticated =", isAuthenticated);
 
     if (isAuthenticated) {
-      throw new Error('Already logged in');
+      throw new Error("Already logged in");
     }
 
     // TODO: This seems to be duplicated with what's inside userDetails:
@@ -179,7 +187,6 @@ export class OthentAuth0Client {
 
     // TODO: Store user data (not token) locally with token's expiration date?
     // localStorage.setItem("id_token", accessToken.id_token);
-
   }
 
   async logOut() {
@@ -217,6 +224,8 @@ export class OthentAuth0Client {
   }
 
   getCachedUserPublicKeyBuffer() {
+    // TODO: This toBuffer() returns a base64 buffer, but where is that defined / specified, as otherwise we could also
+    // do `new TextEncoder().encode(string)`, but the results are different.
     return this.userDetails ? toBuffer(this.userDetails.owner) : null;
   }
 

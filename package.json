@@ -50,14 +50,15 @@
     "warp-arbundles": "^1.0.4"
   },
   "devDependencies": {
-    "tsup": "^8.0.1",
     "@types/bun": "^1.0.2",
     "@types/jwk-to-pem": "^2.0.1",
     "@types/node": "^20.2.5",
     "@types/pem-jwk": "^2.0.1",
+    "arconnect": "^1.0.3",
     "prettier": "^3.0.3",
     "ts-jest": "^29.1.1",
     "tslib": "^2.5.0",
+    "tsup": "^8.0.1",
     "typescript": "^5.0.4"
   },
   "exports": {

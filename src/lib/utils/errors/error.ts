@@ -26,7 +26,12 @@ export class OthentError extends Error {
   developerMessage: string;
   cause?: Error;
 
-  constructor(id: OthentErrorID, developerMessage: string, error?: unknown, fromServer = false) {
+  constructor(
+    id: OthentErrorID,
+    developerMessage: string,
+    error?: unknown,
+    fromServer = false,
+  ) {
     super();
 
     // Native error props:

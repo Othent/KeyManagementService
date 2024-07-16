@@ -5,10 +5,7 @@ import { parseErrorResponse } from "../../utils/errors/error.utils";
 // TODO: Update to keep old response format:
 export type CreateUserResponseData = boolean;
 
-export async function createUser(
-  api: AxiosInstance,
-  idToken: string,
-) {
+export async function createUser(api: AxiosInstance, idToken: string) {
   let createUserSuccess = false;
 
   try {

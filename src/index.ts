@@ -1,51 +1,69 @@
 import { Buffer } from "buffer";
 import { OthentAuth0Client } from "./lib/auth/auth0";
-import Transaction from "arweave/web/lib/transaction";
+import Transaction, { Tag } from "arweave/web/lib/transaction";
 import { addOthentAnalyticsTags } from "./lib/analytics/analytics.utils";
 import type Arweave from "arweave/web";
-import { bufferTob64Url, hash, stringToBuffer } from "./lib/utils/arweaveUtils";
+import {
+  BinaryDataType,
+  binaryDataTypeOrStringToBinaryDataType,
+  bufferTob64Url,
+  hash,
+  stringToUint8Array,
+} from "./lib/utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "./lib/othent-kms-client/client";
-import { DecodedJWT, UserDetailsReturnProps } from "./lib/auth/auth0.types";
+import { Auth0Strategy, DecodedJWT, UserDetailsReturnProps } from "./lib/auth/auth0.types";
+import {
+  ArConnect,
+  DataItem,
+  DispatchResult,
+  SignMessageOptions,
+} from "./types/arconnect/arconnect.types";
+import {
+  ANALYTICS_TAGS,
+  CLIENT_NAME,
+  CLIENT_VERSION,
+  DEFAULT_OTHENT_CONFIG,
+} from "./lib/config/config.constants";
 
-// Old type exports:
-// export * from "./types/mapping/connect";
+// Type exports:
 
-// Polyfill. Should we overwrite a global like this from a library?
+export {
+  DispatchResult,
+  SignMessageOptions,
+} from "./types/arconnect/arconnect.types";
+export { TypedArray, BinaryDataType } from "./lib/utils/arweaveUtils";
+export { Auth0Strategy } from "./lib/auth/auth0.types";
+
+// Constant exports:
+export {
+  DEFAULT_OTHENT_CONFIG,
+  CLIENT_NAME,
+  CLIENT_VERSION,
+} from "./lib/config/config.constants";
+
+// TODO: Polyfill. Should we overwrite a global like this from a library?
 window.Buffer = Buffer;
-
-// TODO: Break the build if the env variables are missing:
-// if (
-//   !process.env.auth0ClientDomain ||
-//   !process.env.auth0ClientId ||
-//   !process.env.kmsServerBaseUrl
-// ) {
-//   process.exit(1);
-// }
 
 // TODO: Export all types (auth, data, etc.)
 
-interface OthentConfig {
+export interface OthentConfig {
   auth0Domain: string;
   auth0ClientId: string;
-  auth0UseRefreshTokens: boolean;
+  auth0Strategy: Auth0Strategy;
   serverBaseURL: string;
 }
 
-interface OthentOptions extends Partial<OthentConfig> {
+export interface OthentOptions extends Partial<OthentConfig> {
   crypto?: Crypto | null;
 }
 
-// type BufferSource = ArrayBuffer | TypedArray | DataView;
+export class Othent /* implements ArConnect*/ {
+  walletName = CLIENT_NAME;
 
-export class Othent {
-  // TODO: Update with production defaults (as env variables do not work):
-  config: OthentConfig = {
-    auth0Domain: process.env.auth0ClientDomain || "gmzcodes-test.eu.auth0.com",
-    auth0ClientId: "RSEz2IKqExKJTMqJ1crVSqjBT12ZgsfW",
-    auth0UseRefreshTokens: false,
-    serverBaseURL: process.env.kmsServerBaseUrl || "http://localhost:3010",
-  };
+  walletVersion = CLIENT_VERSION;
+
+  config: OthentConfig = DEFAULT_OTHENT_CONFIG;
 
   crypto: Crypto;
 
@@ -57,10 +75,13 @@ export class Othent {
 
   // TODO: Add listener for errors and a silentErrors: boolean property?
 
+  // TODO: When using refresh tokens in memory, the developer has to manually call connect() before calling any other function, as otherwise
+  // get a "Missing cached user." error. Can we improve that?
+
   constructor(options: OthentOptions = {}) {
     let { crypto: cryptoOption, ...configOptions } = options;
 
-    this.config = { ...configOptions, ...this.config };
+    this.config = { ...configOptions, ...DEFAULT_OTHENT_CONFIG };
 
     let crypto = cryptoOption;
 
@@ -81,7 +102,7 @@ export class Othent {
     this.auth0 = new OthentAuth0Client(
       this.config.auth0Domain,
       this.config.auth0ClientId,
-      this.config.auth0UseRefreshTokens,
+      this.config.auth0Strategy,
     );
 
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
@@ -107,7 +128,7 @@ export class Othent {
     // - If we do, `getTokenSilently()` returns the user data.
     // - If we don't, it throws a `Login required` error.
 
-    let idToken = '';
+    let idToken = "";
     let user: DecodedJWT | UserDetailsReturnProps | null = null;
 
     try {
@@ -117,7 +138,11 @@ export class Othent {
       user = idTokenData;
     } catch (err) {
       // If we get an error other than `Login required`, we throw it:
-      if (!(err instanceof Error) || err.message !== 'Login required') throw err;
+      if (!(err instanceof Error)) throw err;
+
+      if (err.message !== "Login required" && !err.message.startsWith("Missing Refresh Token")) throw err;
+
+      console.log('getTokenSilently() ERROR =', err);
     }
 
     if (!user) {
@@ -130,8 +155,9 @@ export class Othent {
 
         idToken = id_token;
         user = idTokenData;
-
       } catch (err) {
+        console.error('UNEXPECTED 1 =', err);
+
         // However, there are 2 common scenarios where `logIn()` will throw an error:
         //
         // - When calling `connect()` before the user interacts with the page (e.g. clicks on a button). This happens
@@ -144,7 +170,10 @@ export class Othent {
 
         if (!(err instanceof Error)) throw err;
 
-        if (err.message === 'Popup closed' || err.message.startsWith('Unable to open a popup for loginWithPopup')) {
+        if (
+          err.message === "Popup closed" ||
+          err.message.startsWith("Unable to open a popup for loginWithPopup")
+        ) {
           console.warn(err.message);
 
           return null;
@@ -153,7 +182,7 @@ export class Othent {
     }
 
     // At this point, we should have a valid token (and user). Otherwise, something unexpected happened, so we throw:
-    if (!idToken || !user) throw new Error('Unexpected authentication error');
+    if (!idToken || !user) throw new Error("Unexpected authentication error");
 
     // If everything went well, we just need to validate that the user we got has the custom `user_metadata` fields and return it:
     if (user && OthentAuth0Client.isUserValid(user)) return user;
@@ -170,12 +199,14 @@ export class Othent {
 
       user = idTokenData;
     } catch (err) {
-      throw new Error('Unexpected authentication error');
+      console.error('UNEXPECTED 2 =', err);
+
+      throw new Error("Unexpected authentication error");
     }
 
     if (user && OthentAuth0Client.isUserValid(user)) return user;
 
-    throw new Error('User creation error');
+    throw new Error("User creation error");
   }
 
   /**
@@ -268,12 +299,10 @@ export class Othent {
 
     return Promise.resolve(
       address && addressName
-        ? [
-            {
-              [address]: addressName,
-            },
-          ]
-        : [],
+        ? {
+            [address]: addressName,
+          }
+        : {},
     );
   }
 
@@ -284,8 +313,6 @@ export class Othent {
   getSyncUserDetails() {
     return this.auth0.getCachedUserDetails();
   }
-
-  // TODO: Also export getSub and getPublicKeyAsBuffer?
 
   // TX:
 
@@ -308,7 +335,7 @@ export class Othent {
 
     const signature = await this.api.sign(dataToSign, sub);
 
-    const rawSignature = stringToBuffer(signature);
+    const rawSignature = stringToUint8Array(signature);
 
     let id = await hash(rawSignature);
 
@@ -330,7 +357,7 @@ export class Othent {
     transaction: Transaction,
     arweave: Arweave,
     node?: string,
-  ): Promise<{ id: string }> {
+  ): Promise<DispatchResult> {
     const publicKeyBuffer = this.auth0.getCachedUserPublicKeyBuffer();
     const sub = this.auth0.getCachedUserSub();
 
@@ -348,27 +375,16 @@ export class Othent {
 
     addOthentAnalyticsTags(transaction);
 
-    /*
-    // TODO: Check if this is needed:
-
-    const data = transaction.get("data", { decode: true, string: false });
-
-    const tags = (transaction.get("tags") as Tag[]).map((tag) => ({
+    // Using transaction.tags won't work as those wound still be encoded:
+    const tags = (transaction.get("tags") as unknown as Tag[]).map((tag) => ({
       name: tag.get("name", { decode: true, string: true }),
       value: tag.get("value", { decode: true, string: true }),
     }));
-    */
 
-    const { data, tags } = transaction;
-    const dataEntry = createData(data, signer, { tags });
+    const dateItem = createData(transaction.data, signer, { tags });
 
-    try {
-      // TODO: Is this actually doing something?
-      // This sets DataItem.id and returns rawId
-      await dataEntry.sign(signer);
-    } catch (error) {
-      console.log(error);
-    }
+    // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
+    await dateItem.sign(signer);
 
     try {
       // TODO: Try with a bunch of different nodes?
@@ -381,7 +397,7 @@ export class Othent {
         headers: {
           "Content-Type": "application/octet-stream",
         },
-        body: Buffer.from(dataEntry.getRaw()),
+        body: Buffer.from(dateItem.getRaw()),
       });
 
       if (res.status >= 400) {
@@ -391,14 +407,17 @@ export class Othent {
       }
 
       return {
-        id: await dataEntry.id,
+        id: await dateItem.id,
       };
     } catch {
       await this.sign(transaction);
+
       const uploader = await arweave.transactions.getUploader(transaction);
+
       while (!uploader.isComplete) {
         await uploader.uploadChunk();
       }
+
       return {
         id: transaction.id,
       };
@@ -412,17 +431,14 @@ export class Othent {
    * @param plaintext The data in string format to sign.
    * @returns The encrypted data.
    */
-  async encrypt(
-    plaintext: Uint8Array | string,
-  ): Promise<Uint8Array | string | null> {
+  async encrypt(plaintext: string | BinaryDataType): Promise<Uint8Array> {
     const sub = this.auth0.getCachedUserSub();
 
     if (!sub) throw new Error("Missing cached user.");
 
     const encryptedData = await this.api.encrypt(plaintext, sub);
 
-    // TODO: Convert to the right type:
-    return encryptedData;
+    return stringToUint8Array(encryptedData);
   }
 
   /**
@@ -430,16 +446,13 @@ export class Othent {
    * @param ciphertext The data to decrypt.
    * @returns The decrypted data.
    */
-  async decrypt(
-    ciphertext: Uint8Array | string,
-  ): Promise<Uint8Array | string | null> {
+  async decrypt(ciphertext: string | BinaryDataType): Promise<string> {
     const sub = this.auth0.getCachedUserSub();
 
     if (!sub) throw new Error("Missing cached user.");
 
     const decryptedData = await this.api.decrypt(ciphertext, sub);
 
-    // TODO: Convert to the right type:
     return decryptedData;
   }
 
@@ -452,14 +465,14 @@ export class Othent {
    * @param data The data to sign.
    * @returns The {@linkcode Buffer} format of the signature.
    */
-  async signature(data: Uint8Array | string): Promise<Uint8Array> {
+  async signature(data: string | BinaryDataType): Promise<Uint8Array> {
     const sub = this.auth0.getCachedUserSub();
 
     if (!sub) throw new Error("Missing cached user.");
 
     const signature = await this.api.sign(data, sub);
 
-    const rawSignature = stringToBuffer(signature);
+    const rawSignature = stringToUint8Array(signature);
 
     return rawSignature;
   }
@@ -469,13 +482,13 @@ export class Othent {
    * @param dataItem The data to sign.
    * @returns The signed data item.
    */
-  async signDataItem(dataItemCreateOptions: DataItemCreateOptionsWithData) {
+  async signDataItem(dataItem: DataItem): Promise<Buffer> {
     const publicKeyBuffer = this.auth0.getCachedUserPublicKeyBuffer();
     const sub = this.auth0.getCachedUserSub();
 
     if (!publicKeyBuffer || !sub) throw new Error("Missing cached user.");
 
-    const { data, ...options } = dataItemCreateOptions;
+    const { data, ...options } = dataItem;
 
     const signer: Signer = {
       publicKey: publicKeyBuffer,
@@ -487,20 +500,23 @@ export class Othent {
       // verify: null,
     };
 
-    // TODO: Add tags here too
-    // addOthentAnalyticsTags(transaction);
+    const opts: DataItemCreateOptions = {
+      ...options,
+      tags: [
+        ...(options.tags || []),
+        ...ANALYTICS_TAGS,
+      ],
+    };
 
-    const dataItem = createData(data, signer, options);
+    const dataItemInstance = createData(data, signer, opts);
 
-    try {
-      // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
-      await dataItem.sign(signer);
-    } catch (error) {
-      // TODO: Throw!
-      console.log(error);
-    }
+    // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
+    await dataItemInstance.sign(signer);
 
-    return dataItem.getRaw();
+    // TODO: ArConnects types the return type as ArrayBuffer, but in the example this goes straight into the DataItem constructor, which only accepts Buffer.
+    // new DataItem(dataItemInstance.getRaw().buffer);
+    // return dataItemInstance.getRaw().buffer;
+    return dataItemInstance.getRaw();
   }
 
   /**
@@ -509,8 +525,7 @@ export class Othent {
    * @returns The signed version of the message.
    */
   async signMessage(
-    // TODO: ArConnect has ArrayBuffer here, but it's not consistent with the README and the code snippets.
-    data: Uint8Array,
+    data: string | BinaryDataType,
     options?: SignMessageOptions,
   ): Promise<Uint8Array> {
     const sub = this.auth0.getCachedUserSub();
@@ -519,17 +534,14 @@ export class Othent {
 
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
-    // TODO: Make data: Uint8Array | string | null | ArrayBuffer?
-    // TODO: Use TextEncoder here rather than making users use it manually?
-
-    const hash = new Uint8Array(
-      // TODO: Check with Mathias: Is this standard? Can a message signed with Othent get verified with ArConnect?
-      await this.crypto.subtle.digest(hashAlgorithm, data),
+    const hashArrayBuffer = await this.crypto.subtle.digest(
+      hashAlgorithm,
+      binaryDataTypeOrStringToBinaryDataType(data),
     );
 
-    const signature = await this.api.sign(hash, sub);
+    const signature = await this.api.sign(hashArrayBuffer, sub);
 
-    return stringToBuffer(signature);
+    return stringToUint8Array(signature);
   }
 
   /**
@@ -538,17 +550,16 @@ export class Othent {
    * @returns The signed version of the message.
    */
   async verifyMessage(
-    // TODO: ArConnect has ArrayBuffer here, but it's not consistent with the README and the code snippets.
-    data: Uint8Array,
-    // TODO: ArConnect has ArrayBuffer here, but it's not consistent with the README and the code snippets.
-    signature: Uint8Array | string,
+    data: string | BinaryDataType,
+    signature: string | BinaryDataType,
     publicKey: string,
     options: SignMessageOptions = { hashAlgorithm: "SHA-256" },
   ): Promise<boolean> {
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
-    const hash = new Uint8Array(
-      await this.crypto.subtle.digest(hashAlgorithm, data),
+    const hashArrayBuffer = await this.crypto.subtle.digest(
+      hashAlgorithm,
+      binaryDataTypeOrStringToBinaryDataType(data),
     );
 
     const publicJWK: JsonWebKey = {
@@ -572,22 +583,10 @@ export class Othent {
     const result = await this.crypto.subtle.verify(
       { name: "RSA-PSS", saltLength: 32 },
       cryptoKey,
-      typeof signature === 'string' ? stringToBuffer(signature) : signature,
-      hash,
+      binaryDataTypeOrStringToBinaryDataType(signature),
+      hashArrayBuffer,
     );
 
     return result;
   }
 }
-
-// TODO: Move elsewhere:
-
-export interface DataItemCreateOptionsWithData extends DataItemCreateOptions {
-  data: string | Uint8Array;
-}
-
-export interface SignMessageOptions {
-  hashAlgorithm?: "SHA-256" | "SHA-384" | "SHA-512";
-}
-
-// TODO: Create a type for ArConnect (or import) and use satisfy or implements to check everything matches!

@@ -49,6 +49,9 @@ devDependencies:
   "@types/pem-jwk":
     specifier: ^2.0.1
     version: 2.0.2
+  arconnect:
+    specifier: ^1.0.3
+    version: 1.0.3
   prettier:
     specifier: ^3.0.3
     version: 3.3.2
@@ -823,6 +826,13 @@ packages:
     dependencies:
       arweave: 1.15.1
     dev: false
+
+  /arconnect@1.0.3:
+    resolution:
+      {
+        integrity: sha512-A4BTa1hl8SIbAMVUOsIiLwavmCvIMpbEFSem64klDBuBOMoIuEMUPxP5AoUfUxJZwUdL3NhNj584lCWUSGtdyA==,
+      }
+    dev: true
 
   /array-union@2.1.0:
     resolution:

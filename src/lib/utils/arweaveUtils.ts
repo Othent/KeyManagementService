@@ -1,5 +1,7 @@
 import * as B64js from "base64-js";
 
+// BINARY DATA TYPES:
+
 export type Base64UrlString = string;
 
 export type TypedArray =
@@ -16,48 +18,37 @@ export type TypedArray =
   | BigInt64Array
   | BigUint64Array;
 
-export type BinaryDataType = ArrayBuffer | TypedArray | DataView;
+export type BinaryDataType = ArrayBuffer | TypedArray | DataView | Buffer;
 
-export function concatBuffers(
-  buffers: Uint8Array[] | ArrayBuffer[],
-): Uint8Array {
-  let total_length = 0;
-
-  for (let i = 0; i < buffers.length; i++) {
-    total_length += buffers[i].byteLength;
-  }
-
-  let temp = new Uint8Array(total_length);
-  let offset = 0;
-
-  temp.set(new Uint8Array(buffers[0]), offset);
-  offset += buffers[0].byteLength;
-
-  for (let i = 1; i < buffers.length; i++) {
-    temp.set(new Uint8Array(buffers[i]), offset);
-    offset += buffers[i].byteLength;
-  }
-
-  return temp;
-}
-
-export function b64UrlToString(b64UrlString: string): string {
-  let buffer = b64UrlToBuffer(b64UrlString);
-
-  return bufferToString(buffer);
-}
-
-export function bufferToString(buffer: BinaryDataType): string {
+export function binaryDataTypeToString(buffer: BinaryDataType): string {
   return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
 }
 
-export function stringToBuffer(string: string): Uint8Array {
+export function binaryDataTypeOrStringToString(
+  source: string | BinaryDataType,
+) {
+  return typeof source === "string" ? source : binaryDataTypeToString(source);
+}
+
+export function binaryDataTypeOrStringToBinaryDataType(
+  source: string | BinaryDataType,
+) {
+  return typeof source === "string" ? stringToUint8Array(source) : source;
+}
+
+export function stringToUint8Array(string: string): Uint8Array {
   return new TextEncoder().encode(string);
 }
 
-export function stringToB64Url(string: string): string {
-  return bufferTob64Url(stringToBuffer(string));
-}
+// export function bufferToUint8Array(buffer: Buffer): Uint8Array {
+//   return new Uint8Array(new Uint8Array(buffer.buffer));
+//
+//   // Note that simply doing:
+//   // return new Uint8Array(buffer.buffer);
+//   // The old Buffer and the new Uint8Array will share the same data/memory, so changes to one also affect the other.
+// }
+
+// BASE 64:
 
 export function b64UrlToBuffer(b64UrlString: string): Uint8Array {
   return new Uint8Array(B64js.toByteArray(b64UrlDecode(b64UrlString)));
@@ -87,6 +78,8 @@ export function b64UrlDecode(b64UrlString: string): string {
   return b64UrlString.concat("=".repeat(padding));
 }
 
+// HASH:
+
 export async function hash(
   data: Uint8Array,
   algorithm: string = "SHA-256",
@@ -94,6 +87,8 @@ export async function hash(
   let digest = await crypto.subtle.digest(algorithm, data);
   return new Uint8Array(digest);
 }
+
+// ADDRESS:
 
 export async function ownerToAddress(owner: string): Promise<string> {
   return bufferTob64Url(await hash(b64UrlToBuffer(owner)));

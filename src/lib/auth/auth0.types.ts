@@ -1,6 +1,8 @@
+import { AuthorizationParams as Auth0AuthorizationParams } from "@auth0/auth0-spa-js";
+
 // Auth0:
 
-import { AuthorizationParams as Auth0AuthorizationParams } from "@auth0/auth0-spa-js";
+export type Auth0Strategy = 'iframe-cookies' | 'refresh-localstorage' | 'refresh-memory';
 
 type RemoveIndexSignature<T> = {
   [K in keyof T as string extends K

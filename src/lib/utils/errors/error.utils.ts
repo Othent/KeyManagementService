@@ -18,8 +18,6 @@ export function parseErrorResponse(error: unknown) {
       return error;
     }
 
-    console.log("PARSING =", data);
-
     const { id, developerMessage, cause } = data;
 
     let causeError: Error | undefined;
