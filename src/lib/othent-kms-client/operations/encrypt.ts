@@ -1,24 +1,34 @@
 import { OthentAuth0Client } from "../../auth/auth0";
 import { AxiosInstance } from "axios";
+import { CommonEncodedRequestData } from "./common.types";
+import { parseErrorResponse } from "../../utils/errors/error.utils";
+
+// TODO: Update to keep old response format:
+export type EncryptResponseData = string;
 
 export async function encrypt(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
   plaintext: string,
   keyName: string,
-): Promise<Uint8Array | string | null> {
+) {
   const encodedData = await auth0.encodeToken({ plaintext, keyName });
 
+  let ciphertext: string | null = null;
+
   try {
-    const encryptRequest = (await api.post("/encrypt", { encodedData })).data
-      .data;
+    const encryptResponse = await api.post<EncryptResponseData>("/encrypt", {
+      encodedData,
+    } satisfies CommonEncodedRequestData);
 
-    if (!encryptRequest) {
-      throw new Error("Error encrypting on server.");
-    }
+    ciphertext = encryptResponse.data ?? null;
+  } catch (err) {
+    throw parseErrorResponse(err);
+  }
 
-    return encryptRequest;
-  } catch (e) {
+  if (ciphertext === null) {
     throw new Error("Error encrypting on server.");
   }
+
+  return ciphertext;
 }

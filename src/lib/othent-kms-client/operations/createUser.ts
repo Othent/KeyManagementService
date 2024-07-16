@@ -1,24 +1,30 @@
 import { AxiosInstance } from "axios";
-import { OthentAuth0Client } from "../../auth/auth0";
+import { CommonEncodedRequestData } from "./common.types";
+import { parseErrorResponse } from "../../utils/errors/error.utils";
+
+// TODO: Update to keep old response format:
+export type CreateUserResponseData = boolean;
 
 export async function createUser(
   api: AxiosInstance,
-  auth0: OthentAuth0Client,
-): Promise<any> {
-  const encodedData = await auth0.encodeToken();
+  idToken: string,
+) {
+  let createUserSuccess = false;
 
   try {
-    const createUserRequest = (await api.post("/create-user", { encodedData }))
-      .data;
+    const createUserResponse = await api.post<CreateUserResponseData>(
+      "/create-user",
+      { encodedData: idToken } satisfies CommonEncodedRequestData,
+    );
 
-    if (!createUserRequest) {
-      throw new Error("Error creating user on server.");
-    }
+    createUserSuccess = createUserResponse.data;
+  } catch (err) {
+    throw parseErrorResponse(err);
+  }
 
-    return createUserRequest;
-  } catch (e) {
-    console.log(e);
-
+  if (!createUserSuccess) {
     throw new Error("Error creating user on server.");
   }
+
+  return true;
 }

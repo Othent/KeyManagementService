@@ -4,7 +4,7 @@ import { decrypt } from "./operations/decrypt";
 import { encrypt } from "./operations/encrypt";
 import { sign } from "./operations/sign";
 import { OthentAuth0Client } from "../auth/auth0";
-import { BinaryDataType, bufferToString } from "../utils/arweaveUtils";
+import { BinaryDataType, bufferToString, stringToBuffer } from "../utils/arweaveUtils";
 
 export class OthentKMSClient {
   api: AxiosInstance;
@@ -20,8 +20,8 @@ export class OthentKMSClient {
     this.auth0 = auth0;
   }
 
-  async createUser() {
-    return createUser(this.api, this.auth0);
+  async createUser(idToken: string) {
+    return createUser(this.api, idToken);
   }
 
   async decrypt(ciphertext: Uint8Array | string, keyName: string) {
@@ -52,6 +52,10 @@ export class OthentKMSClient {
   }
 
   getSignerSignFn(keyName: string) {
-    return async (data: Uint8Array) => this.sign(data, keyName);
+    return async (data: Uint8Array) => {
+      const signature = await this.sign(data, keyName);
+
+      return stringToBuffer(signature);
+    };
   }
 }

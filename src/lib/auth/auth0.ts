@@ -86,7 +86,7 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    console.trace("getTokenSilently");
+    console.log("getTokenSilently");
 
     const authorizationParams = OthentAuth0Client.getAuthorizationParams(data);
 
@@ -119,10 +119,13 @@ export class OthentAuth0Client {
 
     // TODO: Logout if user is invalid?
 
-    return getTokenSilentlyResponse;
+    return {
+      ...getTokenSilentlyResponse,
+      idTokenData: decoded_JWT,
+    };
   }
 
-  async logIn(): Promise<DecodedJWT | UserDetailsReturnProps | null> {
+  async logIn() {
     const auth0Client = await this.auth0ClientPromise;
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
@@ -135,8 +138,9 @@ export class OthentAuth0Client {
 
     console.log("login.isAuthenticated =", isAuthenticated);
 
-    // TODO: Throw an error instead as this should never happen. Maybe it happens if an user exist but could not be updated.
-    if (isAuthenticated) return null;
+    if (isAuthenticated) {
+      throw new Error('Already logged in');
+    }
 
     // TODO: This seems to be duplicated with what's inside userDetails:
 
@@ -160,34 +164,30 @@ export class OthentAuth0Client {
     };
     */
 
-    try {
-      console.log("loginWithPopup");
+    console.log("loginWithPopup");
 
-      // TODO: Missing try-catch if the modal is closed.
-      await auth0Client.loginWithPopup({
-        authorizationParams: OthentAuth0Client.getAuthorizationParams({
-          redirect_uri: window.location.origin,
-        }),
-      });
+    // This can throw if the popup is close by the user or if we try to open it before the user interacts with the page.
+    // In both cases, that's handled in the parent `Othent.connect()`:
 
-      const accessToken = await this.getTokenSilently();
-      const jwtObj = jwtDecode(accessToken.id_token) as
-        | DecodedJWT
-        | UserDetailsReturnProps;
-      // localStorage.setItem("id_token", accessToken.id_token);
+    await auth0Client.loginWithPopup({
+      authorizationParams: OthentAuth0Client.getAuthorizationParams({
+        redirect_uri: window.location.origin,
+      }),
+    });
 
-      return jwtObj;
-    } catch (error) {
-      console.log(error);
+    return this.getTokenSilently();
 
-      throw new Error(`${error}`);
-    }
+    // TODO: Store user data (not token) locally with token's expiration date?
+    // localStorage.setItem("id_token", accessToken.id_token);
+
   }
 
   async logOut() {
     const auth0Client = await this.auth0ClientPromise;
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
+
+    this.userDetails = null;
 
     return auth0Client.logout({
       logoutParams: {

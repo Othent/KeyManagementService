@@ -3,10 +3,10 @@ import { OthentAuth0Client } from "./lib/auth/auth0";
 import Transaction from "arweave/web/lib/transaction";
 import { addOthentAnalyticsTags } from "./lib/analytics/analytics.utils";
 import type Arweave from "arweave/web";
-import { bufferTob64Url, hash } from "./lib/utils/arweaveUtils";
+import { bufferTob64Url, hash, stringToBuffer } from "./lib/utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "./lib/othent-kms-client/client";
-import { UserDetailsReturnProps } from "./lib/auth/auth0.types";
+import { DecodedJWT, UserDetailsReturnProps } from "./lib/auth/auth0.types";
 
 // Old type exports:
 // export * from "./types/mapping/connect";
@@ -55,6 +55,8 @@ export class Othent {
 
   // TODO: Add listener for user details change?
 
+  // TODO: Add listener for errors and a silentErrors: boolean property?
+
   constructor(options: OthentOptions = {}) {
     let { crypto: cryptoOption, ...configOptions } = options;
 
@@ -99,44 +101,81 @@ export class Othent {
    * Connect the users account, this is the same as login/signup in one function.
    * @returns The the users details.
    */
-  async connect(): Promise<UserDetailsReturnProps> {
-    console.log("CONNECT");
+  async connect(): Promise<UserDetailsReturnProps | null> {
+    // Call `getTokenSilently()` to reconnect if we still have a valid token / session.
+    //
+    // - If we do, `getTokenSilently()` returns the user data.
+    // - If we don't, it throws a `Login required` error.
 
-    // This calls getTokenSilently
-    // const user = await reconnect();
+    let idToken = '';
+    let user: DecodedJWT | UserDetailsReturnProps | null = null;
 
     try {
-      await this.auth0.getTokenSilently();
+      const { id_token, idTokenData } = await this.auth0.getTokenSilently();
+
+      idToken = id_token;
+      user = idTokenData;
     } catch (err) {
-      console.log("RECONNECT ERROR", err);
+      // If we get an error other than `Login required`, we throw it:
+      if (!(err instanceof Error) || err.message !== 'Login required') throw err;
     }
 
-    const user = this.auth0.getCachedUserDetails();
+    if (!user) {
+      try {
+        // If we made it this far but we don't have an user, we need to log in, so we call `logIn()`. If everything goes
+        // well, `logIn()` will internally call `getTokenSilently()` again after successful authentication, and return a
+        // valid token with the user data:
 
-    console.log("connect.user =", user);
+        const { id_token, idTokenData } = await this.auth0.logIn();
 
-    if (user) return user;
+        idToken = id_token;
+        user = idTokenData;
 
-    // This also calls getTokenSilently when the popup is actually shown:
-    // TODO: Add a note  about this throwing an error if we try to open a popup automatically.
-    const newUser = await this.auth0.logIn();
+      } catch (err) {
+        // However, there are 2 common scenarios where `logIn()` will throw an error:
+        //
+        // - When calling `connect()` before the user interacts with the page (e.g. clicks on a button). This happens
+        //   because we use `connect()` both when the user clicks in a "Log In" / "Connect" button, but also to
+        //   automatically try to get an existing token / connection.
+        //
+        // - When the user closes the authentication popup without authenticating.
+        //
+        // In both cases, we just log the errors and return null; any other error, we throw.
 
-    console.log("newUser =", newUser);
+        if (!(err instanceof Error)) throw err;
 
-    if (newUser && OthentAuth0Client.isUserValid(newUser)) {
-      console.log("User already existed in KMS.");
+        if (err.message === 'Popup closed' || err.message.startsWith('Unable to open a popup for loginWithPopup')) {
+          console.warn(err.message);
 
-      return newUser;
+          return null;
+        }
+      }
     }
 
-    console.log("Creating new KMS user.");
+    // At this point, we should have a valid token (and user). Otherwise, something unexpected happened, so we throw:
+    if (!idToken || !user) throw new Error('Unexpected authentication error');
 
-    // TODO: This calls getTokenSilently again from encodeToken, but it should not! Reuse any of the previous 2 or embed this in getTokenSilently.
-    await this.api.createUser();
+    // If everything went well, we just need to validate that the user we got has the custom `user_metadata` fields and return it:
+    if (user && OthentAuth0Client.isUserValid(user)) return user;
 
-    // TODO: Details need to be re-requested, actually, or sent from the /create-user endpoint.
-    // localStorage.setItem("id_token", JSON.stringify(userDetailsJWT));
-    return this.auth0.getCachedUserDetails()!;
+    // If that's not the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
+    // got to it to avoid making another call to `encodeToken()`, which calls `getTokenSilently()`.
+    await this.api.createUser(idToken);
+
+    // Lastly, we request a new token to update the cached user details and confirm that the `user_metadata` has been
+    // correctly updated:
+
+    try {
+      const { idTokenData } = await this.auth0.getTokenSilently();
+
+      user = idTokenData;
+    } catch (err) {
+      throw new Error('Unexpected authentication error');
+    }
+
+    if (user && OthentAuth0Client.isUserValid(user)) return user;
+
+    throw new Error('User creation error');
   }
 
   /**
@@ -267,11 +306,9 @@ export class Othent {
 
     const dataToSign = await transaction.getSignatureData();
 
-    // TODO: Before this was const signature = this.signature(dataToSign), but that function is gonna get deprecated
+    const signature = await this.api.sign(dataToSign, sub);
 
-    const response = await this.api.sign(dataToSign, sub);
-
-    const rawSignature = Buffer.from(response.data);
+    const rawSignature = stringToBuffer(signature);
 
     let id = await hash(rawSignature);
 
@@ -384,6 +421,7 @@ export class Othent {
 
     const encryptedData = await this.api.encrypt(plaintext, sub);
 
+    // TODO: Convert to the right type:
     return encryptedData;
   }
 
@@ -401,6 +439,7 @@ export class Othent {
 
     const decryptedData = await this.api.decrypt(ciphertext, sub);
 
+    // TODO: Convert to the right type:
     return decryptedData;
   }
 
@@ -413,14 +452,14 @@ export class Othent {
    * @param data The data to sign.
    * @returns The {@linkcode Buffer} format of the signature.
    */
-  async signature(data: Uint8Array | string): Promise<Buffer> {
+  async signature(data: Uint8Array | string): Promise<Uint8Array> {
     const sub = this.auth0.getCachedUserSub();
 
     if (!sub) throw new Error("Missing cached user.");
 
-    const response = await this.api.sign(data, sub);
+    const signature = await this.api.sign(data, sub);
 
-    const rawSignature = Buffer.from(response.data);
+    const rawSignature = stringToBuffer(signature);
 
     return rawSignature;
   }
@@ -470,26 +509,27 @@ export class Othent {
    * @returns The signed version of the message.
    */
   async signMessage(
+    // TODO: ArConnect has ArrayBuffer here, but it's not consistent with the README and the code snippets.
     data: Uint8Array,
-    options: SignMessageOptions,
-  ): Promise<number[]> {
+    options?: SignMessageOptions,
+  ): Promise<Uint8Array> {
+    const sub = this.auth0.getCachedUserSub();
+
+    if (!sub) throw new Error("Missing cached user.");
+
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
     // TODO: Make data: Uint8Array | string | null | ArrayBuffer?
     // TODO: Use TextEncoder here rather than making users use it manually?
 
-    const dataToSign = new Uint8Array(data);
-
     const hash = new Uint8Array(
       // TODO: Check with Mathias: Is this standard? Can a message signed with Othent get verified with ArConnect?
-      await this.crypto.subtle.digest(hashAlgorithm, dataToSign),
+      await this.crypto.subtle.digest(hashAlgorithm, data),
     );
 
-    // TODO: Replace call to this.signature with direct call to service!!
-    const signedMessage = await this.signature(hash);
+    const signature = await this.api.sign(hash, sub);
 
-    // TODO: Why did we chose to return an array instead of the Buffer?
-    return Array.from(new Uint8Array(signedMessage));
+    return stringToBuffer(signature);
   }
 
   /**
@@ -498,20 +538,17 @@ export class Othent {
    * @returns The signed version of the message.
    */
   async verifyMessage(
+    // TODO: ArConnect has ArrayBuffer here, but it's not consistent with the README and the code snippets.
     data: Uint8Array,
-    signature: number[],
-    // TODO: This doesn't match ArConnect's signature.
+    // TODO: ArConnect has ArrayBuffer here, but it's not consistent with the README and the code snippets.
+    signature: Uint8Array | string,
     publicKey: string,
     options: SignMessageOptions = { hashAlgorithm: "SHA-256" },
   ): Promise<boolean> {
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
-    const dataToVerify = new Uint8Array(data);
-
-    const binarySignature = new Uint8Array(signature);
-
     const hash = new Uint8Array(
-      await this.crypto.subtle.digest(hashAlgorithm, dataToVerify),
+      await this.crypto.subtle.digest(hashAlgorithm, data),
     );
 
     const publicJWK: JsonWebKey = {
@@ -535,13 +572,15 @@ export class Othent {
     const result = await this.crypto.subtle.verify(
       { name: "RSA-PSS", saltLength: 32 },
       cryptoKey,
-      binarySignature,
+      typeof signature === 'string' ? stringToBuffer(signature) : signature,
       hash,
     );
 
     return result;
   }
 }
+
+// TODO: Move elsewhere:
 
 export interface DataItemCreateOptionsWithData extends DataItemCreateOptions {
   data: string | Uint8Array;
@@ -551,4 +590,4 @@ export interface SignMessageOptions {
   hashAlgorithm?: "SHA-256" | "SHA-384" | "SHA-512";
 }
 
-// Create a type for ArConnect (or import) and use satisfy to check everything matches!
+// TODO: Create a type for ArConnect (or import) and use satisfy or implements to check everything matches!
