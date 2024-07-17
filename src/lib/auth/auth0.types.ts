@@ -1,8 +1,12 @@
 import { AuthorizationParams as Auth0AuthorizationParams } from "@auth0/auth0-spa-js";
+import { JwtPayload } from "jwt-decode";
 
 // Auth0:
 
-export type Auth0Strategy = 'iframe-cookies' | 'refresh-localstorage' | 'refresh-memory';
+export type Auth0Strategy =
+  | "iframe-cookies"
+  | "refresh-localstorage"
+  | "refresh-memory";
 
 type RemoveIndexSignature<T> = {
   [K in keyof T as string extends K
@@ -23,74 +27,49 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
 
 // JWT data:
 
-export interface DecodedJWT {
-  walletAddress: string;
-  owner: string;
-  given_name: string;
-  family_name: string;
-  nickname: string;
+export interface UserDetails {
+  // Default from Auth0:
+  sub: string;
   name: string;
+  givenName: string;
+  familyName: string;
+  nickname: string;
   picture: string;
   locale: string;
-  updated_at?: string;
   email: string;
-  email_verified: boolean;
-  sub: string;
-  iss?: string;
-  aud?: string;
-  iat?: number;
-  exp?: number;
-  sid?: string;
-  nonce?: string;
-  data?: any;
+  emailVerified: string;
+  expiration: number;
+
+  // Custom from Auth0's Add User Metadata action:
+  owner: string; // Public key derived from `sub`.
+  walletAddress: string; // Wallet address derived from `owner`.
+  authSystem: "KMS";
 }
 
-export interface LoginReturnProps {
-  walletAddress: string;
-  owner: string;
+export interface IdTokenWithData<D = void> extends JwtPayload {
+  // Default from Auth0:
   given_name: string;
   family_name: string;
   nickname: string;
-  name: string;
   picture: string;
   locale: string;
-  updated_at?: string;
+  updated_at: string;
   email: string;
   email_verified: string;
-  sub: string;
-  iss?: string;
-  aud?: string;
-  iat?: number;
-  exp?: number;
-  sid?: string;
-  nonce?: string;
-  data?: any;
-}
-
-export interface UserDetailsReturnProps {
-  authSystem?: string;
-  walletAddress: string;
-  owner: string;
-  given_name: string;
-  family_name: string;
-  nickname: string;
+  nonce: string;
   name: string;
-  picture: string;
-  locale: string;
-  updated_at?: string;
-  email: string;
-  email_verified: boolean;
-  sub: string;
-  iss?: string;
-  aud?: string;
-  iat?: number;
-  exp?: number;
-  sid?: string;
-  nonce?: string;
-  data?: any;
+  sid: string;
+
+  // Custom from Auth0's Add User Metadata action:
+  owner: string; // Public key derived from `sub`.
+  walletAddress: string; // Wallet address derived from `owner`.
+  authSystem: "KMS";
+
+  // Extra data also added to the token in Add User Metadata action when calling functions other than createUser:
+  data: void extends D ? never : D;
 }
 
-// JWT token dATA / encodeToken():
+// JWT token data / encodeToken():
 
 export interface BaseCryptoOperationData {
   keyName: string;

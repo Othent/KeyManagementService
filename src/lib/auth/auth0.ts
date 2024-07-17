@@ -1,32 +1,65 @@
-import { Auth0Client, CacheLocation, createAuth0Client } from "@auth0/auth0-spa-js";
+import {
+  Auth0Client,
+  CacheLocation,
+  createAuth0Client,
+} from "@auth0/auth0-spa-js";
 import { toBuffer } from "../utils/bufferUtils";
 import { jwtDecode } from "jwt-decode";
 import {
-  UserDetailsReturnProps,
-  DecodedJWT,
   CryptoOperationData,
   AuthorizationParams,
   AuthorizationParamsWithTransactionInput,
   Auth0Strategy,
+  IdTokenWithData,
+  UserDetails,
 } from "./auth0.types";
+import { DEFAULT_REFRESH_TOKEN_EXPIRATION_MS } from "../config/config.constants";
 
 export class OthentAuth0Client {
   auth0ClientPromise: Promise<Auth0Client | null> = Promise.resolve(null);
 
   isInitialized = false;
 
-  userDetails: UserDetailsReturnProps | null = null;
+  userDetails: UserDetails | null = null;
 
-  static isUserValid(
-    user: DecodedJWT | UserDetailsReturnProps,
-  ): user is UserDetailsReturnProps {
+  static isUserValid<D>(
+    idTokenOrUser: IdTokenWithData<D> | UserDetails,
+  ): boolean {
+    // Note that we are not using the ID Token `exp` field, which is typically 24 hours. We don't care about that value
+    // as refresh tokens have a much longer expiration, 15 days typically.
+
+    const now = Date.now();
+
+    const expiration =
+      (idTokenOrUser as UserDetails).expiration ||
+      now + DEFAULT_REFRESH_TOKEN_EXPIRATION_MS;
+
     return !!(
-      user &&
-      "authSystem" in user &&
-      user.authSystem === "KMS" &&
-      user.owner &&
-      user.walletAddress
+      idTokenOrUser &&
+      idTokenOrUser.sub &&
+      idTokenOrUser.owner &&
+      idTokenOrUser.walletAddress &&
+      idTokenOrUser.authSystem === "KMS" &&
+      expiration > now
     );
+  }
+
+  static getUserDetails<D>(idToken: IdTokenWithData<D>): UserDetails {
+    return {
+      sub: idToken.sub || "",
+      name: idToken.name,
+      givenName: idToken.given_name,
+      familyName: idToken.family_name,
+      nickname: idToken.nickname,
+      picture: idToken.picture,
+      locale: idToken.locale,
+      email: idToken.email,
+      emailVerified: idToken.email_verified,
+      expiration: Date.now() + DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
+      owner: idToken.owner,
+      walletAddress: idToken.walletAddress,
+      authSystem: idToken.authSystem,
+    };
   }
 
   static getAuthorizationParams(
@@ -61,13 +94,13 @@ export class OthentAuth0Client {
   }
 
   constructor(domain: string, clientId: string, strategy: Auth0Strategy) {
-    // TODO: Should we be able to provide `userDetails` from a cookie or localStorage or whatever?
+    // TODO: Should we be able to provide an initial value for `userDetails` from a cookie / localStorage / sessionStorage or whatever?
 
-    const useRefreshTokens = strategy !== 'iframe-cookies';
-    const cacheLocation: CacheLocation | undefined = (useRefreshTokens ? strategy.replace('refresh-', '') : "memory") as CacheLocation;
+    const useRefreshTokens = strategy !== "iframe-cookies";
 
-    console.log('useRefreshTokens =', useRefreshTokens);
-    console.log('   cacheLocation =', cacheLocation);
+    const cacheLocation: CacheLocation | undefined = (
+      useRefreshTokens ? strategy.replace("refresh-", "") : "memory"
+    ) as CacheLocation;
 
     this.auth0ClientPromise = createAuth0Client({
       domain,
@@ -79,6 +112,24 @@ export class OthentAuth0Client {
         // scope: "openid profile email offline_access"
       },
     });
+  }
+
+  private updateUserDetails<D>(
+    idToken: IdTokenWithData<D> | null,
+  ): UserDetails | null {
+    let nextUserDetails: UserDetails | null = null;
+
+    if (idToken) {
+      nextUserDetails = OthentAuth0Client.isUserValid(idToken)
+        ? OthentAuth0Client.getUserDetails(idToken)
+        : null;
+    }
+
+    // TODO: Update in localStorage / cookie for cross-tab synching / SSR?
+
+    // TODO: Add a timer to remove the user details once they expire.
+
+    return (this.userDetails = nextUserDetails);
   }
 
   async init() {
@@ -94,7 +145,7 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    console.log("getTokenSilently");
+    console.log("getTokenSilently()");
 
     const authorizationParams = OthentAuth0Client.getAuthorizationParams(data);
 
@@ -104,32 +155,15 @@ export class OthentAuth0Client {
       cacheMode: "off", // Forces the client to get a new token, as we actually include data in them, it cannot be done any other way.
     });
 
-    const decoded_JWT: DecodedJWT = jwtDecode(
+    const idToken = jwtDecode<IdTokenWithData>(
       getTokenSilentlyResponse.id_token,
     );
-
-    console.log("decoded_JWT =", { ...decoded_JWT });
-
-    delete decoded_JWT.nonce;
-    delete decoded_JWT.sid;
-    delete decoded_JWT.aud;
-    delete decoded_JWT.iss;
-    delete decoded_JWT.iat;
-    // TODO: Expiration should still be there:
-    delete decoded_JWT.exp;
-    delete decoded_JWT.updated_at;
-    // TODO: Removed data too as this is called to encode different information:
-    delete decoded_JWT.data;
-
-    this.userDetails = OthentAuth0Client.isUserValid(decoded_JWT)
-      ? decoded_JWT
-      : null;
-
-    // TODO: Logout if user is invalid?
+    const userDetails = this.updateUserDetails(idToken);
 
     return {
       ...getTokenSilentlyResponse,
-      idTokenData: decoded_JWT,
+      idToken,
+      userDetails,
     };
   }
 
@@ -138,41 +172,13 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    console.log("LOGIN");
-
-    // TODO: Prevent multiple calls here? These 2 calls are probably not needed:
+    console.log("logIn()");
 
     const isAuthenticated = await auth0Client.isAuthenticated();
-
-    console.log("login.isAuthenticated =", isAuthenticated);
 
     if (isAuthenticated) {
       throw new Error("Already logged in");
     }
-
-    // TODO: This seems to be duplicated with what's inside userDetails:
-
-    // TODO: Also review what's the relationship between these and the privatization Rule in Auth0.
-
-    /*
-    const processDecodedJWT = async (decoded_JWT: DecodedJWT): Promise<any> => {
-      const fieldsToDelete = [
-        "nonce",
-        "sid",
-        "aud",
-        "iss",
-        "iat",
-        "exp",
-        "updated_at",
-      ];
-      fieldsToDelete.forEach(
-        (field) => delete decoded_JWT[field as keyof DecodedJWT],
-      );
-      return decoded_JWT;
-    };
-    */
-
-    console.log("loginWithPopup");
 
     // This can throw if the popup is close by the user or if we try to open it before the user interacts with the page.
     // In both cases, that's handled in the parent `Othent.connect()`:
@@ -184,9 +190,6 @@ export class OthentAuth0Client {
     });
 
     return this.getTokenSilently();
-
-    // TODO: Store user data (not token) locally with token's expiration date?
-    // localStorage.setItem("id_token", accessToken.id_token);
   }
 
   async logOut() {
@@ -194,7 +197,7 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    this.userDetails = null;
+    this.updateUserDetails(null);
 
     return auth0Client.logout({
       logoutParams: {
@@ -206,20 +209,16 @@ export class OthentAuth0Client {
   async encodeToken(data?: CryptoOperationData) {
     const accessToken = await this.getTokenSilently(data);
 
-    // TODO: Using ID tokens might not be the recommended thing to do?
     return accessToken.id_token;
   }
 
   // Getters for cached user data:
 
-  // TODO: Validate expiration.
-
-  getCachedUserDetails(): UserDetailsReturnProps | null {
+  getCachedUserDetails(): UserDetails | null {
     return this.userDetails;
   }
 
   getCachedUserPublicKey() {
-    // return userDetails ? toBuffer(userDetails.owner) : null;
     return this.userDetails?.owner || null;
   }
 

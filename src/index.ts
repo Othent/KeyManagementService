@@ -12,11 +12,15 @@ import {
 } from "./lib/utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "./lib/othent-kms-client/client";
-import { Auth0Strategy, DecodedJWT, UserDetailsReturnProps } from "./lib/auth/auth0.types";
+import {
+  Auth0Strategy,
+  UserDetails,
+} from "./lib/auth/auth0.types";
 import {
   ArConnect,
   DataItem,
   DispatchResult,
+  PermissionType,
   SignMessageOptions,
 } from "./types/arconnect/arconnect.types";
 import {
@@ -33,9 +37,15 @@ export {
   SignMessageOptions,
 } from "./types/arconnect/arconnect.types";
 export { TypedArray, BinaryDataType } from "./lib/utils/arweaveUtils";
-export { Auth0Strategy } from "./lib/auth/auth0.types";
+
+export {
+  Auth0Strategy,
+  IdTokenWithData,
+  UserDetails,
+} from "./lib/auth/auth0.types";
 
 // Constant exports:
+
 export {
   DEFAULT_OTHENT_CONFIG,
   CLIENT_NAME,
@@ -43,9 +53,8 @@ export {
 } from "./lib/config/config.constants";
 
 // TODO: Polyfill. Should we overwrite a global like this from a library?
-window.Buffer = Buffer;
 
-// TODO: Export all types (auth, data, etc.)
+window.Buffer = Buffer;
 
 export interface OthentConfig {
   auth0Domain: string;
@@ -58,7 +67,9 @@ export interface OthentOptions extends Partial<OthentConfig> {
   crypto?: Crypto | null;
 }
 
-export class Othent /* implements ArConnect*/ {
+export class Othent
+  implements Omit<ArConnect, "connect" | "dispatch" | "signDataItem">
+{
   walletName = CLIENT_NAME;
 
   walletVersion = CLIENT_VERSION;
@@ -108,7 +119,13 @@ export class Othent /* implements ArConnect*/ {
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
 
     if (process.env.NODE_ENV === "development") {
-      console.log(this.config);
+      console.log(process.env);
+
+      console.log(`${this.walletName} @ ${this.walletVersion}`);
+
+      Object.entries(this.config).map(([key, value]) => {
+        console.log(` ${key.padStart(13)} = ${value}`);
+      });
     }
   }
 
@@ -122,42 +139,47 @@ export class Othent /* implements ArConnect*/ {
    * Connect the users account, this is the same as login/signup in one function.
    * @returns The the users details.
    */
-  async connect(): Promise<UserDetailsReturnProps | null> {
+  async connect(): Promise<UserDetails | null> {
     // Call `getTokenSilently()` to reconnect if we still have a valid token / session.
     //
     // - If we do, `getTokenSilently()` returns the user data.
     // - If we don't, it throws a `Login required` error.
+    // - We can also get a `Missing Refresh Token` error when using in-memory refresh tokens.
 
-    let idToken = "";
-    let user: DecodedJWT | UserDetailsReturnProps | null = null;
+    let id_token = "";
+    let userDetails: UserDetails | null = null;
 
     try {
-      const { id_token, idTokenData } = await this.auth0.getTokenSilently();
+      const response = await this.auth0.getTokenSilently();
 
-      idToken = id_token;
-      user = idTokenData;
+      id_token = response.id_token;
+      userDetails = response.userDetails;
     } catch (err) {
-      // If we get an error other than `Login required`, we throw it:
+      // If we get an error other than `Login required` or `Missing Refresh Token`, we throw it:
+
       if (!(err instanceof Error)) throw err;
 
-      if (err.message !== "Login required" && !err.message.startsWith("Missing Refresh Token")) throw err;
+      if (
+        err.message !== "Login required" &&
+        !err.message.startsWith("Missing Refresh Token")
+      ) {
+        throw err;
+      }
 
-      console.log('getTokenSilently() ERROR =', err);
+      console.warn(err.message);
     }
 
-    if (!user) {
+    if (!id_token) {
       try {
-        // If we made it this far but we don't have an user, we need to log in, so we call `logIn()`. If everything goes
+        // If we made it this far but we don't have a token, we need to log in, so we call `logIn()`. If everything goes
         // well, `logIn()` will internally call `getTokenSilently()` again after successful authentication, and return a
         // valid token with the user data:
 
-        const { id_token, idTokenData } = await this.auth0.logIn();
+        const response = await this.auth0.logIn();
 
-        idToken = id_token;
-        user = idTokenData;
+        id_token = response.id_token;
+        userDetails = response.userDetails;
       } catch (err) {
-        console.error('UNEXPECTED 1 =', err);
-
         // However, there are 2 common scenarios where `logIn()` will throw an error:
         //
         // - When calling `connect()` before the user interacts with the page (e.g. clicks on a button). This happens
@@ -181,32 +203,37 @@ export class Othent /* implements ArConnect*/ {
       }
     }
 
-    // At this point, we should have a valid token (and user). Otherwise, something unexpected happened, so we throw:
-    if (!idToken || !user) throw new Error("Unexpected authentication error");
+    // We should now have a valid token, but potentially not the user details...
 
-    // If everything went well, we just need to validate that the user we got has the custom `user_metadata` fields and return it:
-    if (user && OthentAuth0Client.isUserValid(user)) return user;
+    if (id_token && !userDetails) {
+      // If that's the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
+      // got to it to avoid making another call to `encodeToken()` / `getTokenSilently()`:
 
-    // If that's not the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
-    // got to it to avoid making another call to `encodeToken()`, which calls `getTokenSilently()`.
-    await this.api.createUser(idToken);
+      await this.api.createUser(id_token);
 
-    // Lastly, we request a new token to update the cached user details and confirm that the `user_metadata` has been
-    // correctly updated:
+      // Lastly, we request a new token to update the cached user details and confirm that the `user_metadata` has been
+      // correctly updated. Note we don't use as try-catch here, as if any error happens at this point, we just want to
+      // throw it.
 
-    try {
-      const { idTokenData } = await this.auth0.getTokenSilently();
+      const response = await this.auth0.getTokenSilently();
 
-      user = idTokenData;
-    } catch (err) {
-      console.error('UNEXPECTED 2 =', err);
-
-      throw new Error("Unexpected authentication error");
+      id_token = response.id_token;
+      userDetails = response.userDetails;
     }
 
-    if (user && OthentAuth0Client.isUserValid(user)) return user;
+    // We should now definitely have a valid token and user details:
 
-    throw new Error("User creation error");
+    if (id_token && userDetails) return userDetails;
+
+    // Otherwise, something unexpected happened, so we log out and throw:
+
+    // No need to await here as we don't really care about waiting for this:
+
+    this.auth0.logOut().catch((err) => {
+      console.warn(err instanceof Error ? err.message : err);
+    });
+
+    throw new Error("Unexpected authentication error");
   }
 
   /**
@@ -355,6 +382,7 @@ export class Othent /* implements ArConnect*/ {
    */
   async dispatch(
     transaction: Transaction,
+    // TODO: Why is this required? Could we instantiate this ourselves with the gateway param just like ArConnect?
     arweave: Arweave,
     node?: string,
   ): Promise<DispatchResult> {
@@ -502,10 +530,7 @@ export class Othent /* implements ArConnect*/ {
 
     const opts: DataItemCreateOptions = {
       ...options,
-      tags: [
-        ...(options.tags || []),
-        ...ANALYTICS_TAGS,
-      ],
+      tags: [...(options.tags || []), ...ANALYTICS_TAGS],
     };
 
     const dataItemInstance = createData(data, signer, opts);
@@ -588,5 +613,37 @@ export class Othent /* implements ArConnect*/ {
     );
 
     return result;
+  }
+
+  async privateHash(
+    data: string | BinaryDataType,
+    options: SignMessageOptions,
+  ): Promise<Uint8Array> {
+    const sub = this.auth0.getCachedUserSub();
+
+    if (!sub) throw new Error("Missing cached user.");
+
+    const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
+
+    const hashArrayBuffer = await this.crypto.subtle.digest(
+      hashAlgorithm,
+      binaryDataTypeOrStringToBinaryDataType(data),
+    );
+
+    return new Uint8Array(hashArrayBuffer);
+  }
+
+  getPermissions(): Promise<PermissionType[]> {
+    return Promise.resolve([
+      "ACCESS_ADDRESS",
+      "ACCESS_PUBLIC_KEY",
+      "ACCESS_ALL_ADDRESSES",
+      "SIGN_TRANSACTION",
+      "ENCRYPT",
+      "DECRYPT",
+      "SIGNATURE",
+      // "ACCESS_ARWEAVE_CONFIG",
+      "DISPATCH",
+    ]);
   }
 }

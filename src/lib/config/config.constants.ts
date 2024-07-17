@@ -15,14 +15,18 @@ export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
 export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   auth0Domain: "gmzcodes-test.eu.auth0.com",
   auth0ClientId: "RSEz2IKqExKJTMqJ1crVSqjBT12ZgsfW",
-  auth0Strategy: 'refresh-memory',
+  auth0Strategy: "refresh-memory",
   serverBaseURL: "http://localhost:3010",
 };
 
 export const CLIENT_NAME = "Othent KMS";
 
-export const CLIENT_VERSION = ""; // TODO: Get this from package.json
+export const CLIENT_VERSION = "0.0.0"; // TODO: Get this from package.json
 
+// TODO: Pass it as an option?
+export const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = 1296000000; // 2 weeks
+
+// TODO: Add more as an option?
 export const ANALYTICS_TAGS: Tag[] = [
   {
     name: "Client",
