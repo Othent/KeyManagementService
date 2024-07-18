@@ -2,6 +2,7 @@ import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
 import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
+import { B64UrlString } from "../../utils/arweaveUtils";
 
 // TODO: Update to keep old response format:
 export type DecryptResponseData = string;
@@ -9,7 +10,7 @@ export type DecryptResponseData = string;
 export async function decrypt(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
-  ciphertext: string,
+  ciphertext: B64UrlString,
   keyName: string,
 ) {
   const encodedData = await auth0.encodeToken({ ciphertext, keyName });

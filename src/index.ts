@@ -6,16 +6,13 @@ import type Arweave from "arweave/web";
 import {
   BinaryDataType,
   binaryDataTypeOrStringToBinaryDataType,
-  bufferTob64Url,
   hash,
   stringToUint8Array,
+  uint8ArrayTob64Url,
 } from "./lib/utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "./lib/othent-kms-client/client";
-import {
-  Auth0Strategy,
-  UserDetails,
-} from "./lib/auth/auth0.types";
+import { Auth0Strategy, UserDetails } from "./lib/auth/auth0.types";
 import {
   ArConnect,
   DataItem,
@@ -119,8 +116,6 @@ export class Othent
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
 
     if (process.env.NODE_ENV === "development") {
-      console.log(process.env);
-
       console.log(`${this.walletName} @ ${this.walletVersion}`);
 
       Object.entries(this.config).map(([key, value]) => {
@@ -140,6 +135,8 @@ export class Othent
    * @returns The the users details.
    */
   async connect(): Promise<UserDetails | null> {
+    // TODO: We can probably save a token generation on page first load using Auth0Client.checkSession() instead.
+
     // Call `getTokenSilently()` to reconnect if we still have a valid token / session.
     //
     // - If we do, `getTokenSilently()` returns the user data.
@@ -367,9 +364,9 @@ export class Othent
     let id = await hash(rawSignature);
 
     transaction.setSignature({
-      id: bufferTob64Url(id),
+      id: uint8ArrayTob64Url(id),
       owner: publicKey,
-      signature: bufferTob64Url(rawSignature),
+      signature: uint8ArrayTob64Url(rawSignature),
     });
 
     return transaction;

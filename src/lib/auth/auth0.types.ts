@@ -1,5 +1,6 @@
 import { AuthorizationParams as Auth0AuthorizationParams } from "@auth0/auth0-spa-js";
 import { JwtPayload } from "jwt-decode";
+import { B64UrlString } from "../utils/arweaveUtils";
 
 // Auth0:
 
@@ -27,6 +28,8 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
 
 // JWT data:
 
+// TODO: Extend Auth0's User type:
+
 export interface UserDetails {
   // Default from Auth0:
   sub: string;
@@ -37,12 +40,12 @@ export interface UserDetails {
   picture: string;
   locale: string;
   email: string;
-  emailVerified: string;
+  emailVerified: boolean;
   expiration: number;
 
   // Custom from Auth0's Add User Metadata action:
-  owner: string; // Public key derived from `sub`.
-  walletAddress: string; // Wallet address derived from `owner`.
+  owner: B64UrlString; // Public key derived from `sub`.
+  walletAddress: B64UrlString; // Wallet address derived from `owner`.
   authSystem: "KMS";
 }
 
@@ -55,14 +58,14 @@ export interface IdTokenWithData<D = void> extends JwtPayload {
   locale: string;
   updated_at: string;
   email: string;
-  email_verified: string;
+  email_verified: boolean;
   nonce: string;
   name: string;
   sid: string;
 
   // Custom from Auth0's Add User Metadata action:
-  owner: string; // Public key derived from `sub`.
-  walletAddress: string; // Wallet address derived from `owner`.
+  owner: B64UrlString; // Public key derived from `sub`.
+  walletAddress: B64UrlString; // Wallet address derived from `owner`.
   authSystem: "KMS";
 
   // Extra data also added to the token in Add User Metadata action when calling functions other than createUser:

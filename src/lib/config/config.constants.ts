@@ -15,7 +15,7 @@ export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
 export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   auth0Domain: "gmzcodes-test.eu.auth0.com",
   auth0ClientId: "RSEz2IKqExKJTMqJ1crVSqjBT12ZgsfW",
-  auth0Strategy: "refresh-memory",
+  auth0Strategy: "refresh-localstorage",
   serverBaseURL: "http://localhost:3010",
 };
 

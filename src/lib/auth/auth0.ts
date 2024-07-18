@@ -155,9 +155,13 @@ export class OthentAuth0Client {
       cacheMode: "off", // Forces the client to get a new token, as we actually include data in them, it cannot be done any other way.
     });
 
-    const idToken = jwtDecode<IdTokenWithData>(
-      getTokenSilentlyResponse.id_token,
-    );
+    const idToken = await auth0Client.getUser<IdTokenWithData>();
+
+    // No need for the `jwtDecode()` function/library as Auth0 provides this as `getUser()`.
+    // const idToken = jwtDecode<IdTokenWithData>(getTokenSilentlyResponse.id_token);
+
+    if (!idToken) throw new Error("Could not get the user's details");
+
     const userDetails = this.updateUserDetails(idToken);
 
     return {
