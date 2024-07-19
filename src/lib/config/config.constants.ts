@@ -17,12 +17,12 @@ export const DEFAULT_GATEWAY_CONFIG: GatewayConfig = {
 
 export const DEFAULT_DISPATCH_NODE = "https://turbo.ardrive.io";
 
-export const CLIENT_NAME = "Othent KMS";
+export const CLIENT_NAME = "Othent KMS" as const;
 
-export const CLIENT_VERSION = "0.0.0"; // TODO: Get this from package.json
+export const CLIENT_VERSION = "0.0.0" as const; // TODO: Get this from package.json
 
 // TODO: Pass it as an option?
-export const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = 1296000000; // 2 weeks
+export const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = 1296000000 as const; // 2 weeks
 
 // TODO: Add more as an option?
 export const ANALYTICS_TAGS: Tag[] = [

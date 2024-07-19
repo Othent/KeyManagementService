@@ -1,5 +1,4 @@
-Othent KMS JS SDK
-=================
+# Othent KMS JS SDK
 
     npm install --save @othent/kms
     yarn install --save @othent/kms
@@ -7,8 +6,7 @@ Othent KMS JS SDK
 
 <br />
 
-Demo:
------
+## Demo:
 
 Find an example test repo using Othent KMS JS SDK [here](https://github.com/Othent/KMS-test-repo).
 

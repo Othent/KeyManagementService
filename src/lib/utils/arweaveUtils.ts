@@ -118,7 +118,7 @@ export function b64UrlDecode(str: B64String | B64UrlString): B64String {
 // HASH:
 
 export async function hash(
-  data: Uint8Array,
+  data: BinaryDataType,
   algorithm: string = "SHA-256",
 ): Promise<Uint8Array> {
   let digest = await crypto.subtle.digest(algorithm, data);

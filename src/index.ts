@@ -29,6 +29,7 @@ import {
   DEFAULT_GATEWAY_CONFIG,
   DEFAULT_OTHENT_CONFIG,
 } from "./lib/config/config.constants";
+import { OthentError } from "./lib/utils/errors/error";
 
 // Type exports:
 
@@ -72,15 +73,35 @@ export interface OthentOptions extends Partial<OthentConfig> {
   crypto?: Crypto | null;
 }
 
+export type URL = `http://${ string }` |  `https://${ string }`;
+
 export interface DispatchOptions {
   arweave?: Arweave;
-  node?: string;
+  node?: URL;
+}
+
+export type OthentEventType = 'auth' | 'error';
+
+export type AuthListener = (userDetails: undefined | null | UserDetails) => void;
+
+export type ErrorListener = (err: Error | OthentError) => void;
+
+export type EventListenersByType = {
+  auth: AuthListener;
+  error: ErrorListener;
 }
 
 export class Othent
   implements
     Omit<ArConnect, "connect" | "signDataItem" | "addToken" | "isTokenAdded">
 {
+
+  private crypto: Crypto;
+
+  private api: OthentKMSClient;
+
+  private auth0: OthentAuth0Client;
+
   walletName = CLIENT_NAME;
 
   walletVersion = CLIENT_VERSION;
@@ -88,12 +109,6 @@ export class Othent
   config: OthentConfig = DEFAULT_OTHENT_CONFIG;
 
   gatewayConfig = DEFAULT_GATEWAY_CONFIG;
-
-  crypto: Crypto;
-
-  api: OthentKMSClient;
-
-  auth0: OthentAuth0Client;
 
   // TODO: Add listener for user details change?
 
@@ -264,6 +279,7 @@ export class Othent
 
     // No need to await here as we don't really care about waiting for this:
 
+    // TODO: Re-enable in production?
     // this.auth0.logOut().catch((err) => {
     //   console.warn(err instanceof Error ? err.message : err);
     // });
@@ -656,14 +672,7 @@ export class Othent
 
     if (!sub) throw new Error("Missing cached user.");
 
-    const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
-
-    const hashArrayBuffer = await this.crypto.subtle.digest(
-      hashAlgorithm,
-      binaryDataTypeOrStringToBinaryDataType(data),
-    );
-
-    return new Uint8Array(hashArrayBuffer);
+    return hash(binaryDataTypeOrStringToBinaryDataType(data), options.hashAlgorithm);
   }
 
   // MISC.:

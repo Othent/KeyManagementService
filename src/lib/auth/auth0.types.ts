@@ -28,7 +28,7 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
 
 // JWT data:
 
-// TODO: Extend Auth0's User type:
+// TODO: Extend Auth0's User type and maybe remove and uninstall JwtPayload
 
 export interface UserDetails {
   // Default from Auth0:
