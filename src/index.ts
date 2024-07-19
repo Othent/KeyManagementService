@@ -1,8 +1,6 @@
 import { Buffer } from "buffer";
 import { OthentAuth0Client } from "./lib/auth/auth0";
-import Transaction, { Tag } from "arweave/web/lib/transaction";
-import { addOthentAnalyticsTags } from "./lib/analytics/analytics.utils";
-import Arweave from "arweave";
+import { Tag as TagData } from "warp-arbundles";
 import {
   B64UrlString,
   BinaryDataType,
@@ -18,10 +16,7 @@ import {
   UserDetails,
 } from "./lib/auth/auth0.types";
 import {
-  AppInfo,
   ArConnect,
-  DataItem,
-  DispatchResult,
   GatewayConfig,
   PermissionType,
   SignMessageOptions,
@@ -33,6 +28,7 @@ import {
   DEFAULT_DISPATCH_NODE,
   DEFAULT_GATEWAY_CONFIG,
   DEFAULT_OTHENT_CONFIG,
+  DEFAULT_OTHENT_OPTIONS,
 } from "./lib/config/config.constants";
 import { OthentError } from "./lib/utils/errors/error";
 import {
@@ -41,6 +37,21 @@ import {
 } from "./lib/events/event-listener-handler";
 import { toBuffer } from "./lib/utils/bufferUtils";
 import { isPromise } from "./lib/utils/promises/promises.utils";
+import axios from "axios";
+import {
+  ArDriveBundledTransactionData,
+  ArDriveBundledTransactionResponseData,
+  UploadedTransactionData,
+} from "./lib/dispatch/dispatch.types";
+import type Transaction from "arweave/web/lib/transaction";
+import type { Tag } from "arweave/web/lib/transaction";
+import type Arweave from "arweave/web";
+import type { ApiConfig } from "arweave/web/lib/api";
+import ArweaveModule from "arweave";
+
+const ArweaveClass = (ArweaveModule as unknown as any).default as Arweave & {
+  init: (apiConfig: ApiConfig) => Arweave;
+};
 
 // Type exports:
 
@@ -83,17 +94,20 @@ export interface OthentConfig {
   serverBaseURL: string;
   autoConnect: AutoConnect;
   throwErrors: boolean;
+  tags: TagData[];
 }
 
 export interface OthentOptions extends Partial<OthentConfig> {
+  appName: string;
+  appVersion: string;
   crypto?: Crypto | null;
 }
 
-export type URL = `http://${string}` | `https://${string}`;
+export type UrlString = `http://${string}` | `https://${string}`;
 
 export interface DispatchOptions {
   arweave?: Arweave;
-  node?: URL;
+  node?: UrlString;
 }
 
 export type OthentEventType = "auth" | "error";
@@ -105,10 +119,26 @@ export type EventListenersByType = {
   error: ErrorListener;
 };
 
+export interface DataItem {
+  data: string | Uint8Array;
+  target?: string;
+  anchor?: string;
+  tags?: TagData[];
+}
+
+export interface AppInfo {
+  name: string;
+  version: string;
+}
+
 export class Othent
   implements
     Omit<ArConnect, "connect" | "signDataItem" | "addToken" | "isTokenAdded">
 {
+  static walletName = CLIENT_NAME;
+
+  static walletVersion = CLIENT_VERSION;
+
   private crypto: Crypto;
 
   private api: OthentKMSClient;
@@ -124,16 +154,27 @@ export class Othent
 
   config: OthentConfig = DEFAULT_OTHENT_CONFIG;
 
-  gatewayConfig = DEFAULT_GATEWAY_CONFIG;
+  appInfo: AppInfo = {
+    name: "",
+    version: "",
+  };
 
-  // TODO: Add an option to globally add our own tags?
+  gatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
   // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
 
-  constructor(options: OthentOptions = {}) {
+  // TODO: Exclude expiration from auth event user details to avoid firing the event so often! Also, users don't need to know, as they'll get notified when it
+  // expires.
+
+  constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     let { crypto: cryptoOption, ...configOptions } = options;
 
     this.config = { ...DEFAULT_OTHENT_CONFIG, ...configOptions };
+
+    this.appInfo = {
+      name: options.appName,
+      version: options.appVersion,
+    };
 
     let crypto = cryptoOption;
 
@@ -348,7 +389,7 @@ export class Othent
     }
 
     if (appInfo) {
-      // TODO: Add version and use this as part of the default analytics tags. Also add these to constructor!
+      this.appInfo = appInfo;
     }
 
     this.gatewayConfig = { ...gateway, ...DEFAULT_GATEWAY_CONFIG };
@@ -559,6 +600,35 @@ export class Othent
 
   // TX:
 
+  private addCommonTags(tags?: TagData[]): TagData[];
+  private addCommonTags(transaction: Transaction): void;
+  private addCommonTags(transactionOrTags: TagData[] | Transaction = []) {
+    if (Array.isArray(transactionOrTags)) {
+      const appInfoTags: TagData[] = [
+        { name: "App-Name", value: this.appInfo.name },
+        { name: "App-Version", value: this.appInfo.version },
+      ];
+
+      return [
+        ...transactionOrTags,
+        ...this.config.tags,
+        ...appInfoTags,
+        ...ANALYTICS_TAGS,
+      ];
+    }
+
+    for (const { name, value } of this.config.tags) {
+      transactionOrTags.addTag(name, value);
+    }
+
+    for (const { name, value } of ANALYTICS_TAGS) {
+      transactionOrTags.addTag(name, value);
+    }
+
+    transactionOrTags.addTag("App-Name", this.appInfo.name);
+    transactionOrTags.addTag("App-Version", this.appInfo.version);
+  }
+
   /**
    * Sign the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
    * @param transaction The transaction to sign.
@@ -569,7 +639,7 @@ export class Othent
 
     transaction.setOwner(publicKey);
 
-    addOthentAnalyticsTags(transaction);
+    this.addCommonTags(transaction);
 
     const dataToSign = await transaction.getSignatureData();
 
@@ -591,10 +661,7 @@ export class Othent
    * @param transaction The transaction to sign.
    * @returns The signed version of the transaction.
    */
-  async dispatch(
-    transaction: Transaction,
-    options?: DispatchOptions,
-  ): Promise<DispatchResult> {
+  async dispatch(transaction: Transaction, options?: DispatchOptions) {
     const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
 
     const signer: Signer = {
@@ -607,44 +674,54 @@ export class Othent
       // verify: null,
     };
 
-    addOthentAnalyticsTags(transaction);
+    this.addCommonTags(transaction);
 
     // Using transaction.tags won't work as those wound still be encoded:
     const tags = (transaction.get("tags") as unknown as Tag[]).map((tag) => ({
       name: tag.get("name", { decode: true, string: true }),
       value: tag.get("value", { decode: true, string: true }),
-    }));
+    })) satisfies TagData[];
 
     const dateItem = createData(transaction.data, signer, { tags });
+
+    // TODO: https://turbo.ardrive.io/ returns `freeUploadLimitBytes`, so we can check before trying to send and potentially ever before signing.
+    // TODO: If we do that, verify what's the different in size if we do dateItem.getRaw() before and after signing.
 
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
     await dateItem.sign(signer);
 
-    try {
-      // TODO: Try with a bunch of different nodes?
+    const url = `${options?.node || DEFAULT_DISPATCH_NODE}/tx`;
 
-      const res = await fetch(`${options?.node || DEFAULT_DISPATCH_NODE}/tx`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/octet-stream",
+    try {
+      // TODO: Try with a bunch of different nodes and/or retry?
+
+      const res = await axios.post<ArDriveBundledTransactionResponseData>(
+        url,
+        dateItem.getRaw(),
+        {
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+          responseType: "json",
         },
-        body: Buffer.from(dateItem.getRaw()),
-      });
+      );
 
       if (res.status >= 400) {
-        throw new Error(
-          `Error uploading DataItem: ${res.status} ${res.statusText}`,
-        );
+        throw new Error(`${res.status} - ${JSON.stringify(res.data)}`);
       }
 
       return {
-        // TODO: Should we return the dataItem itself as well?
-        id: await dateItem.id,
-      };
-    } catch {
+        ...res.data,
+        type: "BUNDLED",
+      } satisfies ArDriveBundledTransactionData;
+    } catch (err) {
+      console.warn(`Error dispatching transaction to ${url} =\n`, err);
+
       await this.sign(transaction);
 
-      const arweave = options?.arweave ?? Arweave.init(this.gatewayConfig);
+      const arweave = options?.arweave ?? ArweaveClass.init(this.gatewayConfig);
 
       const uploader = await arweave.transactions.getUploader(transaction);
 
@@ -654,7 +731,10 @@ export class Othent
 
       return {
         id: transaction.id,
-      };
+        signature: transaction.signature,
+        owner: transaction.owner,
+        type: "BASE",
+      } satisfies UploadedTransactionData;
     }
   }
 
@@ -711,7 +791,7 @@ export class Othent
   async signDataItem(dataItem: DataItem): Promise<Buffer> {
     const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
 
-    const { data, ...options } = dataItem;
+    const { data, tags, ...options } = dataItem;
 
     const signer: Signer = {
       publicKey: toBuffer(publicKey),
@@ -725,7 +805,7 @@ export class Othent
 
     const opts: DataItemCreateOptions = {
       ...options,
-      tags: [...(options.tags || []), ...ANALYTICS_TAGS],
+      tags: this.addCommonTags(tags),
     };
 
     const dataItemInstance = createData(data, signer, opts);

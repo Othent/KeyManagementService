@@ -1,4 +1,4 @@
-import type { OthentConfig } from "../..";
+import type { OthentConfig, OthentOptions, UrlString } from "../..";
 import { Tag } from "warp-arbundles";
 import { GatewayConfig } from "../../types/arconnect/arconnect.types";
 
@@ -9,6 +9,13 @@ export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   serverBaseURL: "https://kms-server.othent.io",
   autoConnect: "lazy",
   throwErrors: true,
+  tags: [],
+};
+
+export const DEFAULT_OTHENT_OPTIONS: OthentOptions = {
+  ...DEFAULT_OTHENT_CONFIG,
+  appName: "",
+  appVersion: "",
 };
 
 export const DEFAULT_GATEWAY_CONFIG: GatewayConfig = {
@@ -17,18 +24,18 @@ export const DEFAULT_GATEWAY_CONFIG: GatewayConfig = {
   port: 443,
 };
 
-export const DEFAULT_DISPATCH_NODE = "https://turbo.ardrive.io";
+export const DEFAULT_DISPATCH_NODE =
+  "https://turbo.ardrive.io" as const satisfies UrlString;
 
 export const CLIENT_NAME = "Othent KMS" as const;
 
 // TODO: Get this from package.json:
-export const CLIENT_VERSION = "0.0.0" as const;
+export const CLIENT_VERSION = "1.0.12" as const;
 
 // TODO: Pass it as an option?
 export const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = 1296000000 as const; // 2 weeks
 
-// TODO: Add more as an option?
-export const ANALYTICS_TAGS: Tag[] = [
+export const ANALYTICS_TAGS = [
   {
     name: "Client",
     value: CLIENT_NAME,
@@ -37,4 +44,4 @@ export const ANALYTICS_TAGS: Tag[] = [
     name: "Client-Version",
     value: CLIENT_VERSION,
   },
-];
+] as const satisfies Tag[];
