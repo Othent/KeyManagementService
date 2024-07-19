@@ -173,10 +173,14 @@ export class OthentAuth0Client {
     const authorizationParams = OthentAuth0Client.getAuthorizationParams(data);
 
     if (process.env.NODE_ENV === "development") {
-      console.log(
-        "getTokenSilently() =",
-        JSON.parse(JSON.stringify(authorizationParams)),
-      );
+      try {
+        console.log(
+          "getTokenSilently() =",
+          { ...authorizationParams, transaction_input: JSON.parse(authorizationParams.transaction_input) },
+        );
+      } catch (err) {
+        console.error('Error logging/parsing `authorizationParams`:', err);
+      }
     }
 
     const getTokenSilentlyResponse = await auth0Client.getTokenSilently({
@@ -206,7 +210,7 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    console.log("logIn()");
+    if (process.env.NODE_ENV === 'development') console.log("logIn()");
 
     const isAuthenticated = await auth0Client.isAuthenticated();
 
@@ -230,6 +234,8 @@ export class OthentAuth0Client {
     const auth0Client = await this.auth0ClientPromise;
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
+
+    if (process.env.NODE_ENV === 'development') console.log("logOut()");
 
     this.updateUserDetails(null);
 
