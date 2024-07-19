@@ -172,8 +172,11 @@ export class OthentAuth0Client {
 
     const authorizationParams = OthentAuth0Client.getAuthorizationParams(data);
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log("getTokenSilently() =", JSON.parse(JSON.stringify(authorizationParams)));
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "getTokenSilently() =",
+        JSON.parse(JSON.stringify(authorizationParams)),
+      );
     }
 
     const getTokenSilentlyResponse = await auth0Client.getTokenSilently({
