@@ -273,6 +273,8 @@ export class Othent
     if (type === "auth") {
       eventListenerHandler = this.auth0.getAuthEventListenerHandler();
     } else if (type === "error") {
+      if (this.config.throwErrors) throw new Error("You can only listen for `error` events if `throwErrors = false`.");
+
       eventListenerHandler = this.errorEventListenerHandler;
     }
 
