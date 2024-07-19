@@ -7,6 +7,7 @@ export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   auth0ClientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
   auth0Strategy: "iframe-cookies",
   serverBaseURL: "https://kms-server.othent.io",
+  autoConnect: "lazy",
 };
 
 export const DEFAULT_GATEWAY_CONFIG: GatewayConfig = {

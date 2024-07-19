@@ -4,6 +4,7 @@ import Transaction, { Tag } from "arweave/web/lib/transaction";
 import { addOthentAnalyticsTags } from "./lib/analytics/analytics.utils";
 import Arweave from "arweave";
 import {
+  B64UrlString,
   BinaryDataType,
   binaryDataTypeOrStringToBinaryDataType,
   hash,
@@ -38,6 +39,7 @@ import {
   BaseEventListener,
   EventListenersHandler,
 } from "./lib/events/event-listener-handler";
+import { toBuffer } from "./lib/utils/bufferUtils";
 
 // Type exports:
 
@@ -71,11 +73,14 @@ export { uint8ArrayTob64Url } from "./lib/utils/arweaveUtils";
 
 window.Buffer = Buffer;
 
+export type AutoConnect = 'eager' | 'lazy' | 'off';
+
 export interface OthentConfig {
   auth0Domain: string;
   auth0ClientId: string;
   auth0Strategy: Auth0Strategy;
   serverBaseURL: string;
+  autoConnect: AutoConnect;
 }
 
 export interface OthentOptions extends Partial<OthentConfig> {
@@ -119,11 +124,6 @@ export class Othent
 
   gatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
-  // TODO: When using refresh tokens in memory, the developer has to manually call connect() before calling any other function, as otherwise
-  // get a "Missing cached user." error. Can we improve that?
-
-  // TODO: Option autoConnect: eager | auto | off
-
   // TODO: Add listener for errors and a silentErrors: boolean property?
 
   // TODO: Add an option to globally add our own tags?
@@ -133,7 +133,7 @@ export class Othent
   constructor(options: OthentOptions = {}) {
     let { crypto: cryptoOption, ...configOptions } = options;
 
-    this.config = { ...configOptions, ...DEFAULT_OTHENT_CONFIG };
+    this.config = { ...DEFAULT_OTHENT_CONFIG, ...configOptions  };
 
     let crypto = cryptoOption;
 
@@ -157,6 +157,10 @@ export class Othent
       this.config.auth0Strategy,
     );
 
+    if (this.config.autoConnect === "eager") {
+      this.connect();
+    }
+
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
 
     if (process.env.NODE_ENV === "development") {
@@ -168,9 +172,10 @@ export class Othent
     }
   }
 
-  async init() {
-    await this.auth0.init();
-  }
+  // TODO: Remove?
+  // async init() {
+  //   await this.auth0.init();
+  // }
 
   addEventListener<E extends OthentEventType>(
     type: E,
@@ -199,6 +204,23 @@ export class Othent
   ) {
     this.errorEventListenerHandler.delete(listener as any);
     this.auth0.getAuthEventListenerHandler().delete(listener as any);
+  }
+
+  // AUTH LOADING:
+
+  private async ensureRequiredUserDataOrThrow() {
+    if (this.config.autoConnect !== "off" && !this.auth0.getCachedUserDetails()) {
+      await this.connect(undefined, undefined, this.gatewayConfig);
+    }
+
+    const { sub, owner } = this.auth0.getCachedUserDetails() || {};
+
+    if (!sub || !owner) throw new Error("Missing cached user.");
+
+    return {
+      sub,
+      publicKey: owner,
+    };
   }
 
   // CONNECT / DISCONNECT:
@@ -436,10 +458,7 @@ export class Othent
    * @returns The signed version of the transaction.
    */
   async sign(transaction: Transaction): Promise<Transaction> {
-    const publicKey = this.auth0.getCachedUserPublicKey();
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!publicKey || !sub) throw new Error("Missing cached user.");
+    const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
 
     transaction.setOwner(publicKey);
 
@@ -469,13 +488,10 @@ export class Othent
     transaction: Transaction,
     options?: DispatchOptions,
   ): Promise<DispatchResult> {
-    const publicKeyBuffer = this.auth0.getCachedUserPublicKeyBuffer();
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!publicKeyBuffer || !sub) throw new Error("Missing cached user.");
+    const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
 
     const signer: Signer = {
-      publicKey: publicKeyBuffer,
+      publicKey: toBuffer(publicKey),
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
@@ -543,9 +559,7 @@ export class Othent
    * @returns The encrypted data.
    */
   async encrypt(plaintext: string | BinaryDataType): Promise<Uint8Array> {
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!sub) throw new Error("Missing cached user.");
+    const { sub } = await this.ensureRequiredUserDataOrThrow();
 
     const ciphertextBuffer = await this.api.encrypt(plaintext, sub);
 
@@ -558,9 +572,7 @@ export class Othent
    * @returns The decrypted data.
    */
   async decrypt(ciphertext: string | BinaryDataType): Promise<string> {
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!sub) throw new Error("Missing cached user.");
+    const { sub } = await this.ensureRequiredUserDataOrThrow();
 
     const plaintext = await this.api.decrypt(ciphertext, sub);
 
@@ -577,9 +589,7 @@ export class Othent
    * @returns The {@linkcode Buffer} format of the signature.
    */
   async signature(data: string | BinaryDataType): Promise<Uint8Array> {
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!sub) throw new Error("Missing cached user.");
+    const { sub } = await this.ensureRequiredUserDataOrThrow();
 
     const signatureBuffer = await this.api.sign(data, sub);
 
@@ -592,15 +602,12 @@ export class Othent
    * @returns The signed data item.
    */
   async signDataItem(dataItem: DataItem): Promise<Buffer> {
-    const publicKeyBuffer = this.auth0.getCachedUserPublicKeyBuffer();
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!publicKeyBuffer || !sub) throw new Error("Missing cached user.");
+    const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
 
     const { data, ...options } = dataItem;
 
     const signer: Signer = {
-      publicKey: publicKeyBuffer,
+      publicKey: toBuffer(publicKey),
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
@@ -634,9 +641,7 @@ export class Othent
     data: string | BinaryDataType,
     options?: SignMessageOptions,
   ): Promise<Uint8Array> {
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!sub) throw new Error("Missing cached user.");
+    const { sub } = await this.ensureRequiredUserDataOrThrow();
 
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
@@ -658,12 +663,14 @@ export class Othent
   async verifyMessage(
     data: string | BinaryDataType,
     signature: string | BinaryDataType,
-    publicKey?: string,
+    publicKey?: B64UrlString,
     options: SignMessageOptions = { hashAlgorithm: "SHA-256" },
   ): Promise<boolean> {
-    const n = publicKey ?? this.auth0.getCachedUserPublicKey();
+    if (!publicKey) {
+      const requiredUserData = await this.ensureRequiredUserDataOrThrow();
 
-    if (!n) throw new Error("Missing public key.");
+      publicKey ||= requiredUserData.publicKey;
+    }
 
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
@@ -676,7 +683,7 @@ export class Othent
       e: "AQAB",
       ext: true,
       kty: "RSA",
-      n,
+      n: publicKey,
     };
 
     const cryptoKey = await this.crypto.subtle.importKey(
@@ -704,10 +711,6 @@ export class Othent
     data: string | BinaryDataType,
     options: SignMessageOptions,
   ): Promise<Uint8Array> {
-    const sub = this.auth0.getCachedUserSub();
-
-    if (!sub) throw new Error("Missing cached user.");
-
     return hash(
       binaryDataTypeOrStringToBinaryDataType(data),
       options.hashAlgorithm,

@@ -24,7 +24,7 @@ export class OthentAuth0Client {
     diffParams: true,
   });
 
-  private isInitialized = false;
+  // private isInitialized = false;
 
   private userDetails: UserDetails | null = null;
 
@@ -127,7 +127,7 @@ export class OthentAuth0Client {
   }
 
   constructor(domain: string, clientId: string, strategy: Auth0Strategy) {
-    // TODO: Should we be able to provide an initial value for `userDetails` from a cookie / localStorage / sessionStorage or whatever?
+    // TODO: Should we be able to provide an initial value for `userDetails` from a cookie / localStorage or whatever?
 
     const useRefreshTokens = strategy !== "iframe-cookies";
 
@@ -163,20 +163,22 @@ export class OthentAuth0Client {
     this.authEventListenerHandler.emit(nextUserDetails);
 
     if (nextUserDetails) {
-      this.userDetailsExpirationTimeoutID = window.setTimeout(this.logOut, nextUserDetails.expiration - Date.now());
+      this.userDetailsExpirationTimeoutID = window.setTimeout(
+        this.logOut,
+        nextUserDetails.expiration - Date.now(),
+      );
     }
 
-    // TODO: Persist in localStorage / sessionStorage / cookie for cross-tab synching / SSR?
+    // TODO: Persist in localStorage / cookie for cross-tab synching / SSR?
 
     return (this.userDetails = nextUserDetails);
   }
 
-  async init() {
-    await this.auth0ClientPromise;
-
-    // TODO: Remove?
-    this.isInitialized = true;
-  }
+  // TODO: Remove?
+  // async init() {
+  //   await this.auth0ClientPromise;
+  //   this.isInitialized = true;
+  // }
 
   // Getters:
 
@@ -281,12 +283,6 @@ export class OthentAuth0Client {
 
   getCachedUserPublicKey() {
     return this.userDetails?.owner || null;
-  }
-
-  getCachedUserPublicKeyBuffer() {
-    // TODO: This toBuffer() returns a base64 buffer, but where is that defined / specified, as otherwise we could also
-    // do `new TextEncoder().encode(string)`, but the results are different.
-    return this.userDetails ? toBuffer(this.userDetails.owner) : null;
   }
 
   getCachedUserSub() {
