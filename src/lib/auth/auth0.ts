@@ -17,14 +17,18 @@ import { DEFAULT_REFRESH_TOKEN_EXPIRATION_MS } from "../config/config.constants"
 import { EventListenersHandler } from "../events/event-listener-handler";
 
 export class OthentAuth0Client {
+  private auth0ClientPromise: Promise<Auth0Client | null> =
+    Promise.resolve(null);
 
-  private auth0ClientPromise: Promise<Auth0Client | null> = Promise.resolve(null);
-
-  private authEventListenerHandler = new EventListenersHandler<AuthListener>({ diffParams: true  });
+  private authEventListenerHandler = new EventListenersHandler<AuthListener>({
+    diffParams: true,
+  });
 
   private isInitialized = false;
 
   private userDetails: UserDetails | null = null;
+
+  private userDetailsExpirationTimeoutID = 0;
 
   static isUserValid<D>(
     idTokenOrUser: IdTokenWithData<D> | UserDetails,
@@ -146,6 +150,8 @@ export class OthentAuth0Client {
   private updateUserDetails<D>(
     idToken: IdTokenWithData<D> | null,
   ): UserDetails | null {
+    window.clearTimeout(this.userDetailsExpirationTimeoutID);
+
     let nextUserDetails: UserDetails | null = null;
 
     if (idToken) {
@@ -156,9 +162,11 @@ export class OthentAuth0Client {
 
     this.authEventListenerHandler.emit(nextUserDetails);
 
-    // TODO: Update in localStorage / cookie for cross-tab synching / SSR?
+    if (nextUserDetails) {
+      this.userDetailsExpirationTimeoutID = window.setTimeout(this.logOut, nextUserDetails.expiration - Date.now());
+    }
 
-    // TODO: Add a timer to remove the user details once they expire.
+    // TODO: Persist in localStorage / sessionStorage / cookie for cross-tab synching / SSR?
 
     return (this.userDetails = nextUserDetails);
   }

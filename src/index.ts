@@ -11,7 +11,11 @@ import {
 } from "./lib/utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "./lib/othent-kms-client/client";
-import { Auth0Strategy, AuthListener, UserDetails } from "./lib/auth/auth0.types";
+import {
+  Auth0Strategy,
+  AuthListener,
+  UserDetails,
+} from "./lib/auth/auth0.types";
 import {
   AppInfo,
   ArConnect,
@@ -30,7 +34,10 @@ import {
   DEFAULT_OTHENT_CONFIG,
 } from "./lib/config/config.constants";
 import { OthentError } from "./lib/utils/errors/error";
-import { BaseEventListener, EventListenersHandler } from "./lib/events/event-listener-handler";
+import {
+  BaseEventListener,
+  EventListenersHandler,
+} from "./lib/events/event-listener-handler";
 
 // Type exports:
 
@@ -75,34 +82,34 @@ export interface OthentOptions extends Partial<OthentConfig> {
   crypto?: Crypto | null;
 }
 
-export type URL = `http://${ string }` |  `https://${ string }`;
+export type URL = `http://${string}` | `https://${string}`;
 
 export interface DispatchOptions {
   arweave?: Arweave;
   node?: URL;
 }
 
-export type OthentEventType = 'auth' | 'error';
+export type OthentEventType = "auth" | "error";
 
 export type ErrorListener = (err: Error | OthentError) => void;
 
 export type EventListenersByType = {
   auth: AuthListener;
   error: ErrorListener;
-}
+};
 
 export class Othent
   implements
     Omit<ArConnect, "connect" | "signDataItem" | "addToken" | "isTokenAdded">
 {
-
   private crypto: Crypto;
 
   private api: OthentKMSClient;
 
   private auth0: OthentAuth0Client;
 
-  private errorEventListenerHandler = new EventListenersHandler<ErrorListener>();
+  private errorEventListenerHandler =
+    new EventListenersHandler<ErrorListener>();
 
   walletName = CLIENT_NAME;
 
@@ -112,12 +119,12 @@ export class Othent
 
   gatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
-  // TODO: Add listener for errors and a silentErrors: boolean property?
-
   // TODO: When using refresh tokens in memory, the developer has to manually call connect() before calling any other function, as otherwise
   // get a "Missing cached user." error. Can we improve that?
 
   // TODO: Option autoConnect: eager | auto | off
+
+  // TODO: Add listener for errors and a silentErrors: boolean property?
 
   // TODO: Add an option to globally add our own tags?
 
@@ -165,16 +172,20 @@ export class Othent
     await this.auth0.init();
   }
 
-  addEventListener<E extends OthentEventType>(type: E, listener: EventListenersByType[E]) {
-    let eventListenerHandler: EventListenersHandler<BaseEventListener> | null = null;
+  addEventListener<E extends OthentEventType>(
+    type: E,
+    listener: EventListenersByType[E],
+  ) {
+    let eventListenerHandler: EventListenersHandler<BaseEventListener> | null =
+      null;
 
-    if (type === 'auth') {
+    if (type === "auth") {
       eventListenerHandler = this.auth0.getAuthEventListenerHandler();
-    } else if (type === 'error') {
+    } else if (type === "error") {
       eventListenerHandler = this.errorEventListenerHandler;
     }
 
-    if (!eventListenerHandler) throw new Error('Unknown event type');
+    if (!eventListenerHandler) throw new Error("Unknown event type");
 
     eventListenerHandler.add(listener);
 
@@ -183,7 +194,9 @@ export class Othent
     };
   }
 
-  removeEventListener<E extends OthentEventType>(listener: EventListenersByType[E]) {
+  removeEventListener<E extends OthentEventType>(
+    listener: EventListenersByType[E],
+  ) {
     this.errorEventListenerHandler.delete(listener as any);
     this.auth0.getAuthEventListenerHandler().delete(listener as any);
   }
@@ -695,7 +708,10 @@ export class Othent
 
     if (!sub) throw new Error("Missing cached user.");
 
-    return hash(binaryDataTypeOrStringToBinaryDataType(data), options.hashAlgorithm);
+    return hash(
+      binaryDataTypeOrStringToBinaryDataType(data),
+      options.hashAlgorithm,
+    );
   }
 
   // MISC.:

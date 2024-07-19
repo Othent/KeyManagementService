@@ -22,10 +22,10 @@ export class EventListenersHandler<T extends BaseEventListener> {
 
   static getUpdateId(value: any) {
     const serializer = (_: string, value: any) => {
-      return value && value === 'oject' && !Array.isArray(value)
+      return value && value === "oject" && !Array.isArray(value)
         ? Object.entries(value).sort((a, b) => a[0].localeCompare(b[0]))
         : value;
-    }
+    };
 
     return JSON.stringify(value, serializer);
   }
@@ -49,7 +49,9 @@ export class EventListenersHandler<T extends BaseEventListener> {
 
       try {
         listenerFn(...args);
-      } catch (err) { /* NOOP */ }
+      } catch (err) {
+        /* NOOP */
+      }
     });
   }
 }
