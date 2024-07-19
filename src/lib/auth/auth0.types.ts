@@ -4,6 +4,8 @@ import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
 
 // Auth0:
 
+export type AuthListener = (userDetails: UserDetails | null) => void;
+
 export type Auth0Strategy =
   | "iframe-cookies"
   | "refresh-localstorage"

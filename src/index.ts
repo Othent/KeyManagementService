@@ -11,7 +11,7 @@ import {
 } from "./lib/utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "./lib/othent-kms-client/client";
-import { Auth0Strategy, UserDetails } from "./lib/auth/auth0.types";
+import { Auth0Strategy, AuthListener, UserDetails } from "./lib/auth/auth0.types";
 import {
   AppInfo,
   ArConnect,
@@ -30,6 +30,7 @@ import {
   DEFAULT_OTHENT_CONFIG,
 } from "./lib/config/config.constants";
 import { OthentError } from "./lib/utils/errors/error";
+import { BaseEventListener, EventListenersHandler } from "./lib/events/event-listener-handler";
 
 // Type exports:
 
@@ -43,6 +44,7 @@ export {
   Auth0Strategy,
   IdTokenWithData,
   UserDetails,
+  AuthListener,
 } from "./lib/auth/auth0.types";
 
 // Constant exports:
@@ -82,8 +84,6 @@ export interface DispatchOptions {
 
 export type OthentEventType = 'auth' | 'error';
 
-export type AuthListener = (userDetails: undefined | null | UserDetails) => void;
-
 export type ErrorListener = (err: Error | OthentError) => void;
 
 export type EventListenersByType = {
@@ -102,6 +102,8 @@ export class Othent
 
   private auth0: OthentAuth0Client;
 
+  private errorEventListenerHandler = new EventListenersHandler<ErrorListener>();
+
   walletName = CLIENT_NAME;
 
   walletVersion = CLIENT_VERSION;
@@ -109,8 +111,6 @@ export class Othent
   config: OthentConfig = DEFAULT_OTHENT_CONFIG;
 
   gatewayConfig = DEFAULT_GATEWAY_CONFIG;
-
-  // TODO: Add listener for user details change?
 
   // TODO: Add listener for errors and a silentErrors: boolean property?
 
@@ -163,6 +163,29 @@ export class Othent
 
   async init() {
     await this.auth0.init();
+  }
+
+  addEventListener<E extends OthentEventType>(type: E, listener: EventListenersByType[E]) {
+    let eventListenerHandler: EventListenersHandler<BaseEventListener> | null = null;
+
+    if (type === 'auth') {
+      eventListenerHandler = this.auth0.getAuthEventListenerHandler();
+    } else if (type === 'error') {
+      eventListenerHandler = this.errorEventListenerHandler;
+    }
+
+    if (!eventListenerHandler) throw new Error('Unknown event type');
+
+    eventListenerHandler.add(listener);
+
+    return () => {
+      eventListenerHandler.delete(listener);
+    };
+  }
+
+  removeEventListener<E extends OthentEventType>(listener: EventListenersByType[E]) {
+    this.errorEventListenerHandler.delete(listener as any);
+    this.auth0.getAuthEventListenerHandler().delete(listener as any);
   }
 
   // CONNECT / DISCONNECT:

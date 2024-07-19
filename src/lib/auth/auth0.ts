@@ -11,15 +11,20 @@ import {
   Auth0Strategy,
   IdTokenWithData,
   UserDetails,
+  AuthListener,
 } from "./auth0.types";
 import { DEFAULT_REFRESH_TOKEN_EXPIRATION_MS } from "../config/config.constants";
+import { EventListenersHandler } from "../events/event-listener-handler";
 
 export class OthentAuth0Client {
-  auth0ClientPromise: Promise<Auth0Client | null> = Promise.resolve(null);
 
-  isInitialized = false;
+  private auth0ClientPromise: Promise<Auth0Client | null> = Promise.resolve(null);
 
-  userDetails: UserDetails | null = null;
+  private authEventListenerHandler = new EventListenersHandler<AuthListener>({ diffParams: true  });
+
+  private isInitialized = false;
+
+  private userDetails: UserDetails | null = null;
 
   static isUserValid<D>(
     idTokenOrUser: IdTokenWithData<D> | UserDetails,
@@ -149,6 +154,8 @@ export class OthentAuth0Client {
         : null;
     }
 
+    this.authEventListenerHandler.emit(nextUserDetails);
+
     // TODO: Update in localStorage / cookie for cross-tab synching / SSR?
 
     // TODO: Add a timer to remove the user details once they expire.
@@ -159,7 +166,14 @@ export class OthentAuth0Client {
   async init() {
     await this.auth0ClientPromise;
 
+    // TODO: Remove?
     this.isInitialized = true;
+  }
+
+  // Getters:
+
+  getAuthEventListenerHandler() {
+    return this.authEventListenerHandler;
   }
 
   // Wrappers around Auth0's native client with some additional functionality:
