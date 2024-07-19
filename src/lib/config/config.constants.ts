@@ -1,5 +1,6 @@
 import type { OthentConfig } from "../..";
 import { Tag } from "warp-arbundles";
+import { GatewayConfig } from "../../types/arconnect/arconnect.types";
 
 export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   auth0Domain: "auth.othent.io",
@@ -7,6 +8,14 @@ export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   auth0Strategy: "iframe-cookies",
   serverBaseURL: "https://kms-server.othent.io",
 };
+
+export const DEFAULT_GATEWAY_CONFIG: GatewayConfig = {
+  host: "arweave.net",
+  protocol: "https",
+  port: 443,
+};
+
+export const DEFAULT_DISPATCH_NODE = "https://turbo.ardrive.io";
 
 export const CLIENT_NAME = "Othent KMS";
 

@@ -2,7 +2,7 @@ import { Buffer } from "buffer";
 import { OthentAuth0Client } from "./lib/auth/auth0";
 import Transaction, { Tag } from "arweave/web/lib/transaction";
 import { addOthentAnalyticsTags } from "./lib/analytics/analytics.utils";
-import type Arweave from "arweave/web";
+import Arweave from "arweave/web";
 import {
   BinaryDataType,
   binaryDataTypeOrStringToBinaryDataType,
@@ -13,6 +13,7 @@ import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "./lib/othent-kms-client/client";
 import { Auth0Strategy, UserDetails } from "./lib/auth/auth0.types";
 import {
+  AppInfo,
   ArConnect,
   DataItem,
   DispatchResult,
@@ -24,6 +25,8 @@ import {
   ANALYTICS_TAGS,
   CLIENT_NAME,
   CLIENT_VERSION,
+  DEFAULT_DISPATCH_NODE,
+  DEFAULT_GATEWAY_CONFIG,
   DEFAULT_OTHENT_CONFIG,
 } from "./lib/config/config.constants";
 
@@ -69,6 +72,11 @@ export interface OthentOptions extends Partial<OthentConfig> {
   crypto?: Crypto | null;
 }
 
+export interface DispatchOptions {
+  arweave?: Arweave;
+  node?: string;
+}
+
 export class Othent
   implements
     Omit<ArConnect, "connect" | "signDataItem" | "addToken" | "isTokenAdded">
@@ -79,18 +87,13 @@ export class Othent
 
   config: OthentConfig = DEFAULT_OTHENT_CONFIG;
 
+  gatewayConfig = DEFAULT_GATEWAY_CONFIG;
+
   crypto: Crypto;
 
   api: OthentKMSClient;
 
   auth0: OthentAuth0Client;
-
-  // TOOD: Actually use this in dispatch():
-  gatewayConfig: GatewayConfig = {
-    host: "arweave.net",
-    protocol: "https",
-    port: 443,
-  };
 
   // TODO: Add listener for user details change?
 
@@ -102,6 +105,8 @@ export class Othent
   // TODO: Option autoConnect: eager | auto | off
 
   // TODO: Add an option to globally add our own tags?
+
+  // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
 
   constructor(options: OthentOptions = {}) {
     let { crypto: cryptoOption, ...configOptions } = options;
@@ -151,7 +156,21 @@ export class Othent
    * Connect the users account, this is the same as login/signup in one function.
    * @returns The the users details.
    */
-  async connect(): Promise<UserDetails | null> {
+  async connect(
+    permissions?: PermissionType[],
+    appInfo?: AppInfo,
+    gateway?: GatewayConfig,
+  ): Promise<UserDetails | null> {
+    if (permissions) {
+      console.warn('Permissions param is ignored. Othent will have access to everything.');
+    };
+
+    if (appInfo) {
+      // TODO: Add version and use this as part of the default analytics tags. Also add these to constructor!
+    };
+
+    this.gatewayConfig = { ...gateway, ...DEFAULT_GATEWAY_CONFIG, };
+
     // TODO: We can probably save a token generation on page first load using Auth0Client.checkSession() instead.
 
     // Call `getTokenSilently()` to reconnect if we still have a valid token / session.
@@ -394,9 +413,7 @@ export class Othent
    */
   async dispatch(
     transaction: Transaction,
-    // TODO: Add both in an `options` object:
-    arweave?: Arweave,
-    node?: string,
+    options?: DispatchOptions,
   ): Promise<DispatchResult> {
     const publicKeyBuffer = this.auth0.getCachedUserPublicKeyBuffer();
     const sub = this.auth0.getCachedUserSub();
@@ -428,11 +445,8 @@ export class Othent
 
     try {
       // TODO: Try with a bunch of different nodes?
-      if (!node) {
-        node = "https://turbo.ardrive.io";
-      }
 
-      const res = await fetch(`${node}/tx`, {
+      const res = await fetch(`${ options?.node || DEFAULT_DISPATCH_NODE }/tx`, {
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",
@@ -452,6 +466,8 @@ export class Othent
       };
     } catch {
       await this.sign(transaction);
+
+      const arweave = options?.arweave ?? Arweave.init(this.gatewayConfig);
 
       const uploader = await arweave.transactions.getUploader(transaction);
 
