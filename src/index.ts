@@ -248,7 +248,7 @@ export class Othent
       this.errorEventListenerHandler.emit(error as Error | OthentError);
     } else {
       console.warn(
-        'Intercepted error:\n',
+        'Unhandled unthrown error:\n',
         error,
         '\nWhen using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`',
       );
