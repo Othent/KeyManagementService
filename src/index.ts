@@ -40,6 +40,7 @@ import {
   EventListenersHandler,
 } from "./lib/events/event-listener-handler";
 import { toBuffer } from "./lib/utils/bufferUtils";
+import { isPromise } from "./lib/utils/promises/promises.utils";
 
 // Type exports:
 
@@ -73,7 +74,7 @@ export { uint8ArrayTob64Url } from "./lib/utils/arweaveUtils";
 
 window.Buffer = Buffer;
 
-export type AutoConnect = 'eager' | 'lazy' | 'off';
+export type AutoConnect = "eager" | "lazy" | "off";
 
 export interface OthentConfig {
   auth0Domain: string;
@@ -81,6 +82,7 @@ export interface OthentConfig {
   auth0Strategy: Auth0Strategy;
   serverBaseURL: string;
   autoConnect: AutoConnect;
+  throwErrors: boolean;
 }
 
 export interface OthentOptions extends Partial<OthentConfig> {
@@ -124,8 +126,6 @@ export class Othent
 
   gatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
-  // TODO: Add listener for errors and a silentErrors: boolean property?
-
   // TODO: Add an option to globally add our own tags?
 
   // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
@@ -133,7 +133,7 @@ export class Othent
   constructor(options: OthentOptions = {}) {
     let { crypto: cryptoOption, ...configOptions } = options;
 
-    this.config = { ...DEFAULT_OTHENT_CONFIG, ...configOptions  };
+    this.config = { ...DEFAULT_OTHENT_CONFIG, ...configOptions };
 
     let crypto = cryptoOption;
 
@@ -161,6 +161,62 @@ export class Othent
       this.connect();
     }
 
+    if (!this.config.throwErrors) {
+      const walletMethods = [
+        "connect",
+        "disconnect",
+        "getActiveAddress",
+        "getActivePublicKey",
+        "getAllAddresses",
+        "getWalletNames",
+        "getUserDetails",
+        "getSyncActiveAddress",
+        "getSyncActivePublicKey",
+        "getSyncAllAddresses",
+        "getSyncWalletNames",
+        "getSyncUserDetails",
+        "sign",
+        "dispatch",
+        "encrypt",
+        "decrypt",
+        "signature",
+        "signDataItem",
+        "signMessage",
+        "verifyMessage",
+        "privateHash",
+        "getArweaveConfig",
+        "getPermissions",
+      ] as const satisfies (keyof Othent)[];
+
+      walletMethods.forEach((walletMethod) => {
+        let fn = this[walletMethod] as Function;
+
+        if (typeof fn !== "function") return;
+
+        fn = fn.bind(this);
+
+        this[walletMethod] = ((...args: unknown[]) => {
+          try {
+            let result = fn(...args);
+
+            if (isPromise(result)) {
+              result = result.catch((err: unknown) => {
+                this.onError(err);
+
+                return null;
+              });
+            }
+
+            return result;
+          } catch (err) {
+            this.onError(err);
+          }
+
+          return null;
+        }) as any;
+      });
+    }
+
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
 
     if (process.env.NODE_ENV === "development") {
@@ -176,6 +232,36 @@ export class Othent
   // async init() {
   //   await this.auth0.init();
   // }
+
+  // ERROR EVENT / ERROR HANDLING:
+
+  private alertTimeoutID = 0;
+
+  private onError(error: unknown) {
+    if (!(error instanceof Error)) {
+      console.warn("Unknown error type", error);
+
+      return;
+    }
+
+    if (this.errorEventListenerHandler.hasListeners) {
+      this.errorEventListenerHandler.emit(error as Error | OthentError);
+    } else {
+      console.warn(
+        'Intercepted error:\n',
+        error,
+        '\nWhen using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`',
+      );
+
+      if (process.env.NODE_ENV === "development") {
+        window.clearTimeout(this.alertTimeoutID);
+
+        this.alertTimeoutID = window.setTimeout(() => {
+          alert('When using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`');
+        }, 1000);
+      }
+    }
+  }
 
   addEventListener<E extends OthentEventType>(
     type: E,
@@ -200,16 +286,30 @@ export class Othent
   }
 
   removeEventListener<E extends OthentEventType>(
+    type: E,
     listener: EventListenersByType[E],
   ) {
-    this.errorEventListenerHandler.delete(listener as any);
-    this.auth0.getAuthEventListenerHandler().delete(listener as any);
+    let eventListenerHandler: EventListenersHandler<BaseEventListener> | null =
+      null;
+
+    if (type === "auth") {
+      eventListenerHandler = this.auth0.getAuthEventListenerHandler();
+    } else if (type === "error") {
+      eventListenerHandler = this.errorEventListenerHandler;
+    }
+
+    if (!eventListenerHandler) throw new Error("Unknown event type");
+
+    eventListenerHandler.delete(listener);
   }
 
   // AUTH LOADING:
 
   private async ensureRequiredUserDataOrThrow() {
-    if (this.config.autoConnect !== "off" && !this.auth0.getCachedUserDetails()) {
+    if (
+      this.config.autoConnect !== "off" &&
+      !this.auth0.getCachedUserDetails()
+    ) {
       await this.connect(undefined, undefined, this.gatewayConfig);
     }
 

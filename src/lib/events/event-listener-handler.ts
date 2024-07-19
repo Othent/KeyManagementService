@@ -30,6 +30,10 @@ export class EventListenersHandler<T extends BaseEventListener> {
     return JSON.stringify(value, serializer);
   }
 
+  get hasListeners() {
+    return this.listeners.size > 0;
+  }
+
   add(listener: T) {
     this.listeners.add(listener);
   }
