@@ -49,6 +49,7 @@ import type Arweave from "arweave/web";
 import type { ApiConfig } from "arweave/web/lib/api";
 import ArweaveModule from "arweave";
 
+// TODO: Fix this properly:
 const ArweaveClass = (ArweaveModule as unknown as any).default as Arweave & {
   init: (apiConfig: ApiConfig) => Arweave;
 };
