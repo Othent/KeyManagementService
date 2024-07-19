@@ -470,9 +470,7 @@ export class Othent
    * @param ciphertext The data to decrypt.
    * @returns The decrypted data.
    */
-  async decrypt(
-    ciphertext: string | BinaryDataType,
-  ): Promise<string> {
+  async decrypt(ciphertext: string | BinaryDataType): Promise<string> {
     const sub = this.auth0.getCachedUserSub();
 
     if (!sub) throw new Error("Missing cached user.");
