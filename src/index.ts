@@ -248,7 +248,7 @@ export class Othent
       this.errorEventListenerHandler.emit(error as Error | OthentError);
     } else {
       console.warn(
-        'Unhandled unthrown error:\n',
+        "Unhandled unthrown error:\n",
         error,
         '\nWhen using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`',
       );
@@ -257,7 +257,9 @@ export class Othent
         window.clearTimeout(this.alertTimeoutID);
 
         this.alertTimeoutID = window.setTimeout(() => {
-          alert('When using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`');
+          alert(
+            'When using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`',
+          );
         }, 1000);
       }
     }
@@ -273,7 +275,10 @@ export class Othent
     if (type === "auth") {
       eventListenerHandler = this.auth0.getAuthEventListenerHandler();
     } else if (type === "error") {
-      if (this.config.throwErrors) throw new Error("You can only listen for `error` events if `throwErrors = false`.");
+      if (this.config.throwErrors)
+        throw new Error(
+          "You can only listen for `error` events if `throwErrors = false`.",
+        );
 
       eventListenerHandler = this.errorEventListenerHandler;
     }
