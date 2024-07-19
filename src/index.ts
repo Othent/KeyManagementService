@@ -471,15 +471,13 @@ export class Othent
    * @returns The decrypted data.
    */
   async decrypt(
-    ciphertext: string | BinaryDataType | BufferObject,
+    ciphertext: string | BinaryDataType,
   ): Promise<string> {
     const sub = this.auth0.getCachedUserSub();
 
     if (!sub) throw new Error("Missing cached user.");
 
-    // const parsedCiphertext = isBufferObject(ciphertext) ? new Uint8Array(ciphertext.data) : ciphertext;
-
-    const plaintext = await this.api.decrypt(ciphertext as any, sub);
+    const plaintext = await this.api.decrypt(ciphertext, sub);
 
     return plaintext;
   }
