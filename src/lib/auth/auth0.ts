@@ -83,12 +83,37 @@ export class OthentAuth0Client {
             data: null,
           };
 
+    const replacer = (key: string, value: any) => {
+      let bufferValues: number[] = [];
+
+      if (
+        value instanceof Buffer ||
+        value instanceof DataView ||
+        ArrayBuffer.isView(value)
+      ) {
+        bufferValues = Array.from(new Uint8Array(value.buffer));
+      } else if (value instanceof ArrayBuffer) {
+        bufferValues = Array.from(new Uint8Array(value));
+      } else {
+        return value;
+      }
+
+      // if key === 'data' then we are signing else we are encrypting / decrypting
+      return key === "data"
+        ? Object.fromEntries(Object.entries(bufferValues))
+        : {
+            type: "Buffer",
+            data: bufferValues,
+          };
+    };
+
     return {
       ...authorizationParams,
       // TODO: We probably want to include the SDK and the API version here as we might want to deprecate the old one once
       // unused (the one where files are embedded in the token).
       transaction_input: JSON.stringify(
         data ? { othentFunction: "KMS", data } : { othentFunction: "KMS" },
+        replacer,
       ),
     } satisfies AuthorizationParamsWithTransactionInput;
   }
@@ -145,9 +170,11 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    console.log("getTokenSilently()");
-
     const authorizationParams = OthentAuth0Client.getAuthorizationParams(data);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log("getTokenSilently() =", JSON.parse(JSON.stringify(authorizationParams)));
+    }
 
     const getTokenSilentlyResponse = await auth0Client.getTokenSilently({
       detailedResponse: true,

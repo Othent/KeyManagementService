@@ -1,28 +1,37 @@
 import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
-import { CommonEncodedRequestData } from "./common.types";
+import { BufferObject, CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { B64UrlString } from "../../utils/arweaveUtils";
+import {
+  BinaryDataType,
+  binaryDataTypeToString,
+} from "../../utils/arweaveUtils";
 
-// TODO: Update to keep old response format:
-export type DecryptResponseData = string;
+// New format:
+// export type DecryptResponseData = boolstringean;
+
+// Old format:
+export interface DecryptResponseData {
+  data: string | BufferObject;
+}
 
 export async function decrypt(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
-  ciphertext: B64UrlString,
+  ciphertext: string | BinaryDataType,
   keyName: string,
-) {
+): Promise<string> {
+  // TODO: `ciphertext` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
   const encodedData = await auth0.encodeToken({ ciphertext, keyName });
 
-  let plaintext: string | null = null;
+  let plaintext: string | BufferObject | null = null;
 
   try {
     const decryptResponse = await api.post<DecryptResponseData>("/decrypt", {
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    plaintext = decryptResponse.data ?? null;
+    plaintext = decryptResponse.data.data ?? null;
   } catch (err) {
     throw parseErrorResponse(err);
   }
@@ -31,5 +40,7 @@ export async function decrypt(
     throw new Error("Error decrypting on server.");
   }
 
-  return plaintext;
+  return typeof plaintext === "string"
+    ? plaintext
+    : binaryDataTypeToString(new Uint8Array(plaintext.data));
 }

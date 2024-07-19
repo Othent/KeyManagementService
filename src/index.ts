@@ -7,7 +7,6 @@ import {
   BinaryDataType,
   binaryDataTypeOrStringToBinaryDataType,
   hash,
-  stringToUint8Array,
   uint8ArrayTob64Url,
 } from "./lib/utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
@@ -26,6 +25,7 @@ import {
   CLIENT_VERSION,
   DEFAULT_OTHENT_CONFIG,
 } from "./lib/config/config.constants";
+import { BufferObject } from "./lib/othent-kms-client/operations/common.types";
 
 // Type exports:
 
@@ -226,9 +226,9 @@ export class Othent
 
     // No need to await here as we don't really care about waiting for this:
 
-    this.auth0.logOut().catch((err) => {
-      console.warn(err instanceof Error ? err.message : err);
-    });
+    // this.auth0.logOut().catch((err) => {
+    //   console.warn(err instanceof Error ? err.message : err);
+    // });
 
     throw new Error("Unexpected authentication error");
   }
@@ -357,16 +357,14 @@ export class Othent
 
     const dataToSign = await transaction.getSignatureData();
 
-    const signature = await this.api.sign(dataToSign, sub);
+    const signatureBuffer = await this.api.sign(dataToSign, sub);
 
-    const rawSignature = stringToUint8Array(signature);
-
-    let id = await hash(rawSignature);
+    let id = await hash(signatureBuffer);
 
     transaction.setSignature({
       id: uint8ArrayTob64Url(id),
       owner: publicKey,
-      signature: uint8ArrayTob64Url(rawSignature),
+      signature: uint8ArrayTob64Url(signatureBuffer),
     });
 
     return transaction;
@@ -432,6 +430,7 @@ export class Othent
       }
 
       return {
+        // TODO: Should we return the dataItem itself as well?
         id: await dateItem.id,
       };
     } catch {
@@ -461,9 +460,9 @@ export class Othent
 
     if (!sub) throw new Error("Missing cached user.");
 
-    const encryptedData = await this.api.encrypt(plaintext, sub);
+    const ciphertextBuffer = await this.api.encrypt(plaintext, sub);
 
-    return stringToUint8Array(encryptedData);
+    return ciphertextBuffer;
   }
 
   /**
@@ -471,14 +470,18 @@ export class Othent
    * @param ciphertext The data to decrypt.
    * @returns The decrypted data.
    */
-  async decrypt(ciphertext: string | BinaryDataType): Promise<string> {
+  async decrypt(
+    ciphertext: string | BinaryDataType | BufferObject,
+  ): Promise<string> {
     const sub = this.auth0.getCachedUserSub();
 
     if (!sub) throw new Error("Missing cached user.");
 
-    const decryptedData = await this.api.decrypt(ciphertext, sub);
+    // const parsedCiphertext = isBufferObject(ciphertext) ? new Uint8Array(ciphertext.data) : ciphertext;
 
-    return decryptedData;
+    const plaintext = await this.api.decrypt(ciphertext as any, sub);
+
+    return plaintext;
   }
 
   // SIGN:
@@ -495,11 +498,9 @@ export class Othent
 
     if (!sub) throw new Error("Missing cached user.");
 
-    const signature = await this.api.sign(data, sub);
+    const signatureBuffer = await this.api.sign(data, sub);
 
-    const rawSignature = stringToUint8Array(signature);
-
-    return rawSignature;
+    return signatureBuffer;
   }
 
   /**
@@ -561,9 +562,9 @@ export class Othent
       binaryDataTypeOrStringToBinaryDataType(data),
     );
 
-    const signature = await this.api.sign(hashArrayBuffer, sub);
+    const signatureBuffer = await this.api.sign(hashArrayBuffer, sub);
 
-    return stringToUint8Array(signature);
+    return signatureBuffer;
   }
 
   /**
@@ -574,9 +575,13 @@ export class Othent
   async verifyMessage(
     data: string | BinaryDataType,
     signature: string | BinaryDataType,
-    publicKey: string,
+    publicKey?: string,
     options: SignMessageOptions = { hashAlgorithm: "SHA-256" },
   ): Promise<boolean> {
+    const n = publicKey ?? this.auth0.getCachedUserPublicKey();
+
+    if (!n) throw new Error("Missing public key.");
+
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
     const hashArrayBuffer = await this.crypto.subtle.digest(
@@ -588,7 +593,7 @@ export class Othent
       e: "AQAB",
       ext: true,
       kty: "RSA",
-      n: publicKey,
+      n,
     };
 
     const cryptoKey = await this.crypto.subtle.importKey(

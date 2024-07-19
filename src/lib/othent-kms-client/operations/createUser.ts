@@ -2,10 +2,18 @@ import { AxiosInstance } from "axios";
 import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 
-// TODO: Update to keep old response format:
-export type CreateUserResponseData = boolean;
+// New format:
+// export type CreateUserResponseData = boolean;
 
-export async function createUser(api: AxiosInstance, idToken: string) {
+// Old format:
+export interface CreateUserResponseData {
+  data: boolean;
+}
+
+export async function createUser(
+  api: AxiosInstance,
+  idToken: string,
+): Promise<boolean> {
   let createUserSuccess = false;
 
   try {
@@ -14,7 +22,7 @@ export async function createUser(api: AxiosInstance, idToken: string) {
       { encodedData: idToken } satisfies CommonEncodedRequestData,
     );
 
-    createUserSuccess = createUserResponse.data;
+    createUserSuccess = createUserResponse.data.data;
   } catch (err) {
     throw parseErrorResponse(err);
   }

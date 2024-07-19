@@ -1,28 +1,38 @@
 import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
-import { CommonEncodedRequestData } from "./common.types";
+import { BufferObject, CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { B64UrlString } from "../../utils/arweaveUtils";
+import {
+  BinaryDataType,
+  binaryDataTypeToString,
+  stringToUint8Array,
+} from "../../utils/arweaveUtils";
 
-// TODO: Update to keep old response format:
-export type SignResponseData = string;
+// New format:
+// export type SignResponseData = boolstringean;
+
+// Old format:
+export interface SignResponseData {
+  data: string | BufferObject;
+}
 
 export async function sign(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
-  data: B64UrlString,
+  data: string | BinaryDataType,
   keyName: string,
-) {
+): Promise<Uint8Array> {
+  // TODO: `data` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
   const encodedData = await auth0.encodeToken({ data, keyName });
 
-  let signature: string | null = null;
+  let signature: string | BufferObject | null = null;
 
   try {
     const signResponse = await api.post<SignResponseData>("/sign", {
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    signature = signResponse.data;
+    signature = signResponse.data.data;
   } catch (err) {
     throw parseErrorResponse(err);
   }
@@ -31,5 +41,7 @@ export async function sign(
     throw new Error("Error signing data on server.");
   }
 
-  return signature;
+  return typeof signature === "string"
+    ? stringToUint8Array(signature)
+    : new Uint8Array(signature.data);
 }

@@ -19,20 +19,22 @@ export type TypedArray =
 export type BinaryDataType = ArrayBuffer | TypedArray | DataView | Buffer;
 
 function binaryDataTypeToUint8Array(buffer: BinaryDataType): Uint8Array {
-  if (buffer instanceof Buffer) {
-    return buffer;
-  } else if (buffer instanceof DataView) {
+  if (
+    buffer instanceof Buffer ||
+    buffer instanceof DataView ||
+    ArrayBuffer.isView(buffer)
+  ) {
     return new Uint8Array(buffer.buffer);
   } else if (buffer instanceof ArrayBuffer) {
     return new Uint8Array(buffer);
-  } else {
-    return new Uint8Array(buffer.buffer);
   }
+
+  throw new Error("Unknown buffer type.");
 }
 
-// export function binaryDataTypeToString(buffer: BinaryDataType): string {
-//   return new TextDecoder().decode(buffer);
-// }
+export function binaryDataTypeToString(buffer: BinaryDataType): string {
+  return new TextDecoder().decode(buffer);
+}
 
 export function binaryDataTypeTob64Url(buffer: BinaryDataType): B64UrlString {
   return uint8ArrayTob64Url(binaryDataTypeToUint8Array(buffer));

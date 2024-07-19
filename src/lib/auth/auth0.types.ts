@@ -1,6 +1,6 @@
 import { AuthorizationParams as Auth0AuthorizationParams } from "@auth0/auth0-spa-js";
 import { JwtPayload } from "jwt-decode";
-import { B64UrlString } from "../utils/arweaveUtils";
+import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
 
 // Auth0:
 
@@ -79,15 +79,18 @@ export interface BaseCryptoOperationData {
 }
 
 export interface SignOperationData extends BaseCryptoOperationData {
-  data: string;
+  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+  data: string | BinaryDataType;
 }
 
 export interface EncryptOperationData extends BaseCryptoOperationData {
-  plaintext: string;
+  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+  plaintext: string | BinaryDataType;
 }
 
 export interface DecryptOperationData extends BaseCryptoOperationData {
-  ciphertext: string;
+  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+  ciphertext: string | BinaryDataType;
 }
 
 export type CryptoOperationData =

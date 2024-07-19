@@ -6,8 +6,6 @@ import { sign } from "./operations/sign";
 import { OthentAuth0Client } from "../auth/auth0";
 import {
   BinaryDataType,
-  binaryDataTypeOrStringTob64String,
-  stringToUint8Array,
 } from "../utils/arweaveUtils";
 
 export class OthentKMSClient {
@@ -25,40 +23,22 @@ export class OthentKMSClient {
   }
 
   async decrypt(ciphertext: string | BinaryDataType, keyName: string) {
-    return decrypt(
-      this.api,
-      this.auth0,
-      binaryDataTypeOrStringTob64String(ciphertext),
-      keyName,
-    );
+    return decrypt(this.api, this.auth0, ciphertext, keyName);
   }
 
   async encrypt(plaintext: string | BinaryDataType, keyName: string) {
-    return encrypt(
-      this.api,
-      this.auth0,
-      binaryDataTypeOrStringTob64String(plaintext),
-      keyName,
-    );
+    return encrypt(this.api, this.auth0, plaintext, keyName);
   }
 
   async sign(data: string | BinaryDataType, keyName: string) {
-    console.log("sign()");
-
-    return sign(
-      this.api,
-      this.auth0,
-      binaryDataTypeOrStringTob64String(data),
-      keyName,
-    );
+    return sign(this.api, this.auth0, data, keyName);
   }
 
   getSignerSignFn(keyName: string) {
     return async (data: Uint8Array) => {
-      // TODO: Note the backend returns b64strings so we might need to convert and properly type this:
-      const signature = await this.sign(data, keyName);
+      const signatureBuffer = await this.sign(data, keyName);
 
-      return stringToUint8Array(signature);
+      return signatureBuffer;
     };
   }
 }

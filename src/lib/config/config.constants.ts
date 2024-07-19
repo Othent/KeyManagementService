@@ -1,23 +1,23 @@
 import type { OthentConfig } from "../..";
 import { Tag } from "warp-arbundles";
 
-/*
 // TODO: Use production defaults:
 
 export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   auth0Domain: "auth.othent.io",
   auth0ClientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
-  auth0UseRefreshTokens: true,
+  auth0Strategy: "iframe-cookies",
   serverBaseURL: "https://kms-server.othent.io",
 };
-*/
 
+/*
 export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   auth0Domain: "gmzcodes-test.eu.auth0.com",
   auth0ClientId: "RSEz2IKqExKJTMqJ1crVSqjBT12ZgsfW",
   auth0Strategy: "refresh-localstorage",
   serverBaseURL: "http://localhost:3010",
 };
+*/
 
 export const CLIENT_NAME = "Othent KMS";
 
