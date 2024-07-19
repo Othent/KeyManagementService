@@ -9,7 +9,7 @@ dependencies:
     specifier: ^2.1.3
     version: 2.1.3
   arweave:
-    specifier: ^1.14.4
+    specifier: ^1.15.1
     version: 1.15.1
   axios:
     specifier: ^1.6.0

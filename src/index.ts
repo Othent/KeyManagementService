@@ -2,7 +2,7 @@ import { Buffer } from "buffer";
 import { OthentAuth0Client } from "./lib/auth/auth0";
 import Transaction, { Tag } from "arweave/web/lib/transaction";
 import { addOthentAnalyticsTags } from "./lib/analytics/analytics.utils";
-import Arweave from "arweave/web";
+import Arweave from "arweave";
 import {
   BinaryDataType,
   binaryDataTypeOrStringToBinaryDataType,
@@ -162,14 +162,16 @@ export class Othent
     gateway?: GatewayConfig,
   ): Promise<UserDetails | null> {
     if (permissions) {
-      console.warn('Permissions param is ignored. Othent will have access to everything.');
-    };
+      console.warn(
+        "Permissions param is ignored. Othent will have access to everything.",
+      );
+    }
 
     if (appInfo) {
       // TODO: Add version and use this as part of the default analytics tags. Also add these to constructor!
-    };
+    }
 
-    this.gatewayConfig = { ...gateway, ...DEFAULT_GATEWAY_CONFIG, };
+    this.gatewayConfig = { ...gateway, ...DEFAULT_GATEWAY_CONFIG };
 
     // TODO: We can probably save a token generation on page first load using Auth0Client.checkSession() instead.
 
@@ -446,7 +448,7 @@ export class Othent
     try {
       // TODO: Try with a bunch of different nodes?
 
-      const res = await fetch(`${ options?.node || DEFAULT_DISPATCH_NODE }/tx`, {
+      const res = await fetch(`${options?.node || DEFAULT_DISPATCH_NODE}/tx`, {
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",
