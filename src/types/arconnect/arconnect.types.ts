@@ -112,11 +112,11 @@ export abstract class ArConnect {
    *
    * @returns Promise of the user's Arweave config
    */
-  // abstract getArweaveConfig(): Promise<{
-  //   host: string;
-  //   port: number;
-  //   protocol: "http" | "https";
-  // }>;
+  abstract getArweaveConfig(): Promise<{
+    host: string;
+    port: number;
+    protocol: "http" | "https";
+  }>;
 
   /**
    * @deprecated Find alternatives at https://docs.arconnect.io/api/signature
@@ -141,7 +141,11 @@ export abstract class ArConnect {
    * @param type Type of the token (asset or collectible)
    * @param gateway Gateway config for the token
    */
-  // abstract addToken(id: string, type?: TokenType, gateway?: GatewayConfig): Promise<void>;
+  abstract addToken(
+    id: string,
+    type?: string,
+    gateway?: GatewayConfig,
+  ): Promise<void>;
 
   /**
    * Checks if a token has been added to ArConnect
@@ -150,7 +154,7 @@ export abstract class ArConnect {
    *
    * @returns Token added or not
    */
-  // abstract isTokenAdded(id: string): Promise<boolean>;
+  abstract isTokenAdded(id: string): Promise<boolean>;
 
   /**
    * Dispatch an Arweave transaction (preferably bundled)

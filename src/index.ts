@@ -16,6 +16,7 @@ import {
   ArConnect,
   DataItem,
   DispatchResult,
+  GatewayConfig,
   PermissionType,
   SignMessageOptions,
 } from "./types/arconnect/arconnect.types";
@@ -25,7 +26,6 @@ import {
   CLIENT_VERSION,
   DEFAULT_OTHENT_CONFIG,
 } from "./lib/config/config.constants";
-import { BufferObject } from "./lib/othent-kms-client/operations/common.types";
 
 // Type exports:
 
@@ -49,6 +49,11 @@ export {
   CLIENT_VERSION,
 } from "./lib/config/config.constants";
 
+// B64 utils:
+// TODO: Add everything in a namespace/object:
+
+export { uint8ArrayTob64Url } from "./lib/utils/arweaveUtils";
+
 // TODO: Polyfill. Should we overwrite a global like this from a library?
 
 window.Buffer = Buffer;
@@ -65,7 +70,8 @@ export interface OthentOptions extends Partial<OthentConfig> {
 }
 
 export class Othent
-  implements Omit<ArConnect, "connect" | "dispatch" | "signDataItem">
+  implements
+    Omit<ArConnect, "connect" | "signDataItem" | "addToken" | "isTokenAdded">
 {
   walletName = CLIENT_NAME;
 
@@ -79,12 +85,23 @@ export class Othent
 
   auth0: OthentAuth0Client;
 
+  // TOOD: Actually use this in dispatch():
+  gatewayConfig: GatewayConfig = {
+    host: "arweave.net",
+    protocol: "https",
+    port: 443,
+  };
+
   // TODO: Add listener for user details change?
 
   // TODO: Add listener for errors and a silentErrors: boolean property?
 
   // TODO: When using refresh tokens in memory, the developer has to manually call connect() before calling any other function, as otherwise
   // get a "Missing cached user." error. Can we improve that?
+
+  // TODO: Option autoConnect: eager | auto | off
+
+  // TODO: Add an option to globally add our own tags?
 
   constructor(options: OthentOptions = {}) {
     let { crypto: cryptoOption, ...configOptions } = options;
@@ -377,8 +394,8 @@ export class Othent
    */
   async dispatch(
     transaction: Transaction,
-    // TODO: Why is this required? Could we instantiate this ourselves with the gateway param just like ArConnect?
-    arweave: Arweave,
+    // TODO: Add both in an `options` object:
+    arweave?: Arweave,
     node?: string,
   ): Promise<DispatchResult> {
     const publicKeyBuffer = this.auth0.getCachedUserPublicKeyBuffer();
@@ -629,6 +646,12 @@ export class Othent
     );
 
     return new Uint8Array(hashArrayBuffer);
+  }
+
+  // MISC.:
+
+  getArweaveConfig() {
+    return Promise.resolve(this.gatewayConfig satisfies GatewayConfig);
   }
 
   getPermissions(): Promise<PermissionType[]> {
