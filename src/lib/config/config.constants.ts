@@ -2,7 +2,7 @@ import type { OthentConfig, OthentOptions, UrlString } from "../..";
 import { Tag } from "warp-arbundles";
 import { GatewayConfig } from "../../types/arconnect/arconnect.types";
 
-export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
+export const DEFAULT_OTHENT_CONFIG = {
   auth0Domain: "auth.othent.io",
   auth0ClientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
   auth0Strategy: "iframe-cookies",
@@ -10,19 +10,19 @@ export const DEFAULT_OTHENT_CONFIG: OthentConfig = {
   autoConnect: "lazy",
   throwErrors: true,
   tags: [],
-};
+} as const satisfies OthentConfig;
 
-export const DEFAULT_OTHENT_OPTIONS: OthentOptions = {
+export const DEFAULT_OTHENT_OPTIONS = {
   ...DEFAULT_OTHENT_CONFIG,
   appName: "",
   appVersion: "",
-};
+} as const satisfies OthentOptions;
 
-export const DEFAULT_GATEWAY_CONFIG: GatewayConfig = {
+export const DEFAULT_GATEWAY_CONFIG = {
   host: "arweave.net",
   protocol: "https",
   port: 443,
-};
+} as const satisfies GatewayConfig;
 
 export const DEFAULT_DISPATCH_NODE =
   "https://turbo.ardrive.io" as const satisfies UrlString;
