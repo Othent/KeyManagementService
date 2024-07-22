@@ -824,16 +824,6 @@ export class Othent
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
     await dataItemInstance.sign(signer);
 
-    // TODO: ArConnects types the return type as ArrayBuffer, but in the example that goes straight into the `DataItem`
-    // constructor, which only accepts Buffer, so this is not valid:
-    //     new DataItem(dataItemInstance.getRaw().buffer);
-    // Instead, we need to do:
-    //     new DataItem(Buffer.from(dataItemInstance.getRaw().buffer));
-    // Otherwise, if ArConnect's example is fine, the types are wrong and this function actually returns `Buffer`:
-    //     new DataItem(dataItemInstance.getRaw());
-    // In Othent's case, we prefer to return `ArrayBuffer`, as the return type from `dataItemInstance.getRaw()` cannot
-    // be handled bu the test repo's `replacer()` function so it doesn't seem to be a "proper" `Buffer` anyway.
-
     return dataItemInstance.getRaw().buffer;
   }
 
