@@ -4,16 +4,9 @@ import {
 } from "@auth0/auth0-spa-js";
 import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
 import type { JwtPayload } from "jwt-decode";
-import { RemoveIndexSignature } from "../../types/utils/type-utils.types";
+import { RemoveIndexSignature } from "../utils/typescript/type-utils.types";
 
 // Auth0:
-
-export type AuthListener = (userDetails: UserDetails | null) => void;
-
-export type Auth0Strategy =
-  | "iframe-cookies"
-  | "refresh-localstorage"
-  | "refresh-memory";
 
 export type AuthorizationParams =
   RemoveIndexSignature<Auth0AuthorizationParams>;

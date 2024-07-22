@@ -1,6 +1,7 @@
-import type { OthentConfig, OthentOptions, UrlString } from "../..";
 import { Tag } from "warp-arbundles";
-import { GatewayConfig } from "../../types/arconnect/arconnect.types";
+import { GatewayConfig } from "../utils/arconnect/arconnect.types";
+import { OthentConfig, OthentOptions } from "./config.types";
+import { UrlString } from "../utils/typescript/url.types";
 
 export const DEFAULT_OTHENT_CONFIG = {
   auth0Domain: "auth.othent.io",

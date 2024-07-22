@@ -1,3 +1,7 @@
+// TODO: Not implemented.
+
+/*
+
 export interface GenerateKeyReturnType {
   mnemonic: string;
   JWK: any;
@@ -9,3 +13,4 @@ export interface ImportKeyReturnType {
 }
 
 export interface ImportCryptoKeyReturnType {}
+*/

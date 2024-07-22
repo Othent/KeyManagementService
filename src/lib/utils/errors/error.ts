@@ -1,3 +1,5 @@
+// Error serialization sent by the backend:
+
 export interface BasicErrorData {
   name: string;
   message: string;
@@ -11,6 +13,8 @@ export interface ErrorResponseData {
   cause?: BasicErrorData;
 }
 
+// Same as backend (KMS-server-new):
+
 export enum OthentErrorID {
   Unexpected = "Unexpected",
   Validation = "Validation",
@@ -20,6 +24,8 @@ export enum OthentErrorID {
   Signing = "Signing",
   PublicKey = "PublicKey",
 }
+
+// Custom Othent error class for the client/frontend:
 
 export class OthentError extends Error {
   id: OthentErrorID;

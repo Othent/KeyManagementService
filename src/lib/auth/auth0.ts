@@ -7,10 +7,8 @@ import {
   CryptoOperationData,
   AuthorizationParams,
   AuthorizationParamsWithTransactionInput,
-  Auth0Strategy,
   IdTokenWithData,
   UserDetails,
-  AuthListener,
   TransactionInput,
 } from "./auth0.types";
 import {
@@ -18,8 +16,9 @@ import {
   CLIENT_VERSION,
   DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
 } from "../config/config.constants";
-import { EventListenersHandler } from "../events/event-listener-handler";
-import { AppInfo } from "../..";
+import { EventListenersHandler } from "../utils/events/event-listener-handler";
+import { AuthListener } from "../othent/othent.types";
+import { AppInfo, Auth0Strategy } from "../config/config.types";
 
 export class OthentAuth0Client {
   private auth0ClientPromise: Promise<Auth0Client | null> =
