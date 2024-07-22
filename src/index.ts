@@ -208,6 +208,7 @@ export class Othent
       this.config.auth0Domain,
       this.config.auth0ClientId,
       this.config.auth0Strategy,
+      this.appInfo,
     );
 
     if (this.config.autoConnect === "eager") {
@@ -401,6 +402,7 @@ export class Othent
 
     if (appInfo) {
       this.appInfo = appInfo;
+      this.auth0.setAppInfo(appInfo);
     }
 
     this.gatewayConfig = { ...gateway, ...DEFAULT_GATEWAY_CONFIG };

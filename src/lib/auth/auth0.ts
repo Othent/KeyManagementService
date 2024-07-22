@@ -3,7 +3,6 @@ import {
   CacheLocation,
   createAuth0Client,
 } from "@auth0/auth0-spa-js";
-import { toBuffer } from "../utils/bufferUtils";
 import {
   CryptoOperationData,
   AuthorizationParams,
@@ -12,9 +11,15 @@ import {
   IdTokenWithData,
   UserDetails,
   AuthListener,
+  TransactionInput,
 } from "./auth0.types";
-import { DEFAULT_REFRESH_TOKEN_EXPIRATION_MS } from "../config/config.constants";
+import {
+  CLIENT_NAME,
+  CLIENT_VERSION,
+  DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
+} from "../config/config.constants";
 import { EventListenersHandler } from "../events/event-listener-handler";
+import { AppInfo } from "../..";
 
 export class OthentAuth0Client {
   private auth0ClientPromise: Promise<Auth0Client | null> =
@@ -27,6 +32,11 @@ export class OthentAuth0Client {
   private userDetails: UserDetails | null = null;
 
   private userDetailsExpirationTimeoutID = 0;
+
+  private appInfo: AppInfo = {
+    name: "",
+    version: "",
+  };
 
   isReady = false;
 
@@ -65,13 +75,81 @@ export class OthentAuth0Client {
     };
   }
 
-  static getAuthorizationParams(
+  constructor(
+    domain: string,
+    clientId: string,
+    strategy: Auth0Strategy,
+    appInfo: AppInfo,
+  ) {
+    // TODO: Should we be able to provide an initial value for `userDetails` from a cookie / localStorage or whatever?
+
+    const useRefreshTokens = strategy !== "iframe-cookies";
+
+    const cacheLocation: CacheLocation | undefined = (
+      useRefreshTokens ? strategy.replace("refresh-", "") : "memory"
+    ) as CacheLocation;
+
+    this.auth0ClientPromise = createAuth0Client({
+      domain,
+      clientId,
+      useRefreshTokens,
+      cacheLocation,
+      authorizationParams: {
+        redirect_uri: window.location.origin,
+        // scope: "openid profile email offline_access"
+      },
+    }).then((Auth0Client) => {
+      this.isReady = true;
+
+      return Auth0Client;
+    });
+
+    this.appInfo = appInfo;
+  }
+
+  private updateUserDetails<D>(
+    idToken: IdTokenWithData<D> | null,
+  ): UserDetails | null {
+    window.clearTimeout(this.userDetailsExpirationTimeoutID);
+
+    const nextUserDetails: UserDetails | null =
+      idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
+        ? OthentAuth0Client.getUserDetails(idToken)
+        : null;
+
+    this.authEventListenerHandler.emit(nextUserDetails);
+
+    if (nextUserDetails) {
+      this.userDetailsExpirationTimeoutID = window.setTimeout(
+        this.logOut,
+        DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
+      );
+    }
+
+    // TODO: Persist in localStorage / cookie for cross-tab synching / SSR?
+
+    return (this.userDetails = nextUserDetails);
+  }
+
+  // Getters & Setters:
+
+  getAuthEventListenerHandler() {
+    return this.authEventListenerHandler;
+  }
+
+  setAppInfo(appInfo: AppInfo) {
+    this.appInfo = appInfo;
+  }
+
+  // Authorization params helper:
+
+  getAuthorizationParams(
     authorizationParams?: AuthorizationParams,
   ): AuthorizationParamsWithTransactionInput;
-  static getAuthorizationParams(
+  getAuthorizationParams(
     data?: CryptoOperationData,
   ): AuthorizationParamsWithTransactionInput;
-  static getAuthorizationParams(
+  getAuthorizationParams(
     authorizationParamsOrData: AuthorizationParams | CryptoOperationData = {},
   ): AuthorizationParamsWithTransactionInput {
     const { authorizationParams, data } =
@@ -110,70 +188,22 @@ export class OthentAuth0Client {
           };
     };
 
-    return {
-      ...authorizationParams,
-      // TODO: We probably want to include the SDK and the API version here as we might want to deprecate the old one once
-      // unused (the one where files are embedded in the token).
-      transaction_input: JSON.stringify(
-        data ? { othentFunction: "KMS", data } : { othentFunction: "KMS" },
-        replacer,
-      ),
-    } satisfies AuthorizationParamsWithTransactionInput;
-  }
+    const transactionInput: TransactionInput = {
+      othentFunction: "KMS",
+      othentSDKVersion: CLIENT_NAME,
+      othentAPIVersion: CLIENT_VERSION,
+      appName: this.appInfo.name,
+      appVersion: this.appInfo.version,
+    };
 
-  constructor(domain: string, clientId: string, strategy: Auth0Strategy) {
-    // TODO: Should we be able to provide an initial value for `userDetails` from a cookie / localStorage or whatever?
-
-    const useRefreshTokens = strategy !== "iframe-cookies";
-
-    const cacheLocation: CacheLocation | undefined = (
-      useRefreshTokens ? strategy.replace("refresh-", "") : "memory"
-    ) as CacheLocation;
-
-    this.auth0ClientPromise = createAuth0Client({
-      domain,
-      clientId,
-      useRefreshTokens,
-      cacheLocation,
-      authorizationParams: {
-        redirect_uri: window.location.origin,
-        // scope: "openid profile email offline_access"
-      },
-    }).then((Auth0Client) => {
-      this.isReady = true;
-
-      return Auth0Client;
-    });
-  }
-
-  private updateUserDetails<D>(
-    idToken: IdTokenWithData<D> | null,
-  ): UserDetails | null {
-    window.clearTimeout(this.userDetailsExpirationTimeoutID);
-
-    const nextUserDetails: UserDetails | null =
-      idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
-        ? OthentAuth0Client.getUserDetails(idToken)
-        : null;
-
-    this.authEventListenerHandler.emit(nextUserDetails);
-
-    if (nextUserDetails) {
-      this.userDetailsExpirationTimeoutID = window.setTimeout(
-        this.logOut,
-        DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
-      );
+    if (data) {
+      transactionInput.data = data;
     }
 
-    // TODO: Persist in localStorage / cookie for cross-tab synching / SSR?
-
-    return (this.userDetails = nextUserDetails);
-  }
-
-  // Getters:
-
-  getAuthEventListenerHandler() {
-    return this.authEventListenerHandler;
+    return {
+      ...authorizationParams,
+      transaction_input: JSON.stringify(transactionInput, replacer),
+    } satisfies AuthorizationParamsWithTransactionInput;
   }
 
   // Wrappers around Auth0's native client with some additional functionality:
@@ -183,7 +213,7 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    const authorizationParams = OthentAuth0Client.getAuthorizationParams(data);
+    const authorizationParams = this.getAuthorizationParams(data);
 
     if (process.env.NODE_ENV === "development") {
       try {
@@ -240,7 +270,7 @@ export class OthentAuth0Client {
     // In both cases, that's handled in the parent `Othent.connect()`:
 
     await auth0Client.loginWithPopup({
-      authorizationParams: OthentAuth0Client.getAuthorizationParams({
+      authorizationParams: this.getAuthorizationParams({
         redirect_uri: window.location.origin,
       }),
     });

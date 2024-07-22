@@ -4,6 +4,7 @@ import {
 } from "@auth0/auth0-spa-js";
 import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
 import type { JwtPayload } from "jwt-decode";
+import { RemoveIndexSignature } from "../../types/utils/type-utils.types";
 
 // Auth0:
 
@@ -13,16 +14,6 @@ export type Auth0Strategy =
   | "iframe-cookies"
   | "refresh-localstorage"
   | "refresh-memory";
-
-type RemoveIndexSignature<T> = {
-  [K in keyof T as string extends K
-    ? never
-    : number extends K
-      ? never
-      : symbol extends K
-        ? never
-        : K]: T[K];
-};
 
 export type AuthorizationParams =
   RemoveIndexSignature<Auth0AuthorizationParams>;
@@ -103,3 +94,17 @@ export type CryptoOperationData =
   | SignOperationData
   | EncryptOperationData
   | DecryptOperationData;
+
+export interface TransactionInput {
+  // For Auth0-related logic and analytics:
+  othentFunction: "KMS";
+  othentSDKVersion: string;
+  othentAPIVersion: string;
+
+  // For App-related analytics:
+  appName: string;
+  appVersion: string;
+
+  // Operation data:
+  data?: CryptoOperationData;
+}
