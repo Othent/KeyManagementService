@@ -193,8 +193,13 @@ export class Othent
       }
     }
 
-    if (this.config.autoConnect === "eager" && this.config.auth0Strategy === "refresh-memory") {
-      throw new Error('In-memory refresh tokens cannot be used with `autoConnect = "eager"`. Use `autoConnect = "lazy"` instead');
+    if (
+      this.config.autoConnect === "eager" &&
+      this.config.auth0Strategy === "refresh-memory"
+    ) {
+      throw new Error(
+        'In-memory refresh tokens cannot be used with `autoConnect = "eager"`. Use `autoConnect = "lazy"` instead',
+      );
     }
 
     this.crypto = crypto!;
