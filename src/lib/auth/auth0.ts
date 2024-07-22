@@ -24,46 +24,41 @@ export class OthentAuth0Client {
     diffParams: true,
   });
 
-  // private isInitialized = false;
-
   private userDetails: UserDetails | null = null;
 
   private userDetailsExpirationTimeoutID = 0;
 
-  static isUserValid<D>(
-    idTokenOrUser: IdTokenWithData<D> | UserDetails,
-  ): boolean {
-    // Note that we are not using the ID Token `exp` field, which is typically 24 hours. We don't care about that value
-    // as refresh tokens have a much longer expiration, 15 days typically.
+  isReady = false;
 
-    const now = Date.now();
-
-    const expiration =
-      (idTokenOrUser as UserDetails).expiration ||
-      now + DEFAULT_REFRESH_TOKEN_EXPIRATION_MS;
+  static isIdTokenValidUser<D>(idToken: IdTokenWithData<D>): boolean {
+    // Note that we are not checking the ID Token `exp` field, which is typically 24 hours. We don't care about that
+    // value as refresh tokens have a much longer expiration, 15 days typically.
 
     return !!(
-      idTokenOrUser &&
-      idTokenOrUser.sub &&
-      idTokenOrUser.owner &&
-      idTokenOrUser.walletAddress &&
-      idTokenOrUser.authSystem === "KMS" &&
-      expiration > now
+      idToken &&
+      idToken.sub &&
+      idToken.owner &&
+      idToken.walletAddress &&
+      idToken.authSystem === "KMS"
     );
   }
 
   static getUserDetails<D>(idToken: IdTokenWithData<D>): UserDetails {
     return {
       sub: idToken.sub || "",
-      name: idToken.name,
-      givenName: idToken.given_name,
-      familyName: idToken.family_name,
-      nickname: idToken.nickname,
-      picture: idToken.picture,
-      locale: idToken.locale,
-      email: idToken.email,
-      emailVerified: idToken.email_verified,
-      expiration: Date.now() + DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
+      name: idToken.name || "",
+      givenName: idToken.given_name || "",
+      middleName: idToken.middle_name || "",
+      familyName: idToken.family_name || "",
+      nickname: idToken.nickname || "",
+      preferredUsername: idToken.preferred_username || "",
+      profile: idToken.profile || "",
+      picture: idToken.picture || "",
+      website: idToken.website || "",
+      locale: idToken.locale || "",
+      updatedAt: idToken.updated_at || "",
+      email: idToken.email || "",
+      emailVerified: !!idToken.email_verified,
       owner: idToken.owner,
       walletAddress: idToken.walletAddress,
       authSystem: idToken.authSystem,
@@ -144,6 +139,10 @@ export class OthentAuth0Client {
         redirect_uri: window.location.origin,
         // scope: "openid profile email offline_access"
       },
+    }).then((Auth0Client) => {
+      this.isReady = true;
+
+      return Auth0Client;
     });
   }
 
@@ -152,20 +151,17 @@ export class OthentAuth0Client {
   ): UserDetails | null {
     window.clearTimeout(this.userDetailsExpirationTimeoutID);
 
-    let nextUserDetails: UserDetails | null = null;
-
-    if (idToken) {
-      nextUserDetails = OthentAuth0Client.isUserValid(idToken)
+    const nextUserDetails: UserDetails | null =
+      idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
         ? OthentAuth0Client.getUserDetails(idToken)
         : null;
-    }
 
     this.authEventListenerHandler.emit(nextUserDetails);
 
     if (nextUserDetails) {
       this.userDetailsExpirationTimeoutID = window.setTimeout(
         this.logOut,
-        nextUserDetails.expiration - Date.now(),
+        DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
       );
     }
 
@@ -173,12 +169,6 @@ export class OthentAuth0Client {
 
     return (this.userDetails = nextUserDetails);
   }
-
-  // TODO: Remove?
-  // async init() {
-  //   await this.auth0ClientPromise;
-  //   this.isInitialized = true;
-  // }
 
   // Getters:
 
@@ -206,26 +196,31 @@ export class OthentAuth0Client {
       }
     }
 
-    const getTokenSilentlyResponse = await auth0Client.getTokenSilently({
-      detailedResponse: true,
-      authorizationParams,
-      cacheMode: "off", // Forces the client to get a new token, as we actually include data in them, it cannot be done any other way.
-    });
+    try {
+      const getTokenSilentlyResponse = await auth0Client.getTokenSilently({
+        detailedResponse: true,
+        authorizationParams,
+        cacheMode: "off", // Forces the client to get a new token, as we actually include data in them, it cannot be done any other way.
+      });
 
-    const idToken = await auth0Client.getUser<IdTokenWithData>();
+      // const idToken = jwtDecode<IdTokenWithData>(getTokenSilentlyResponse.id_token);
+      // No need for the `jwtDecode()` function/library as Auth0 provides this as `getUser()`:
+      const idToken = await auth0Client.getUser<IdTokenWithData>();
 
-    // No need for the `jwtDecode()` function/library as Auth0 provides this as `getUser()`.
-    // const idToken = jwtDecode<IdTokenWithData>(getTokenSilentlyResponse.id_token);
+      if (!idToken) throw new Error("Could not get the user's details");
 
-    if (!idToken) throw new Error("Could not get the user's details");
+      const userDetails = this.updateUserDetails(idToken);
 
-    const userDetails = this.updateUserDetails(idToken);
+      return {
+        ...getTokenSilentlyResponse,
+        idToken,
+        userDetails,
+      };
+    } catch (err) {
+      this.forceLogOut();
 
-    return {
-      ...getTokenSilentlyResponse,
-      idToken,
-      userDetails,
-    };
+      throw err;
+    }
   }
 
   async logIn() {
@@ -258,14 +253,23 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    if (process.env.NODE_ENV === "development") console.log("logOut()");
-
     this.updateUserDetails(null);
 
     return auth0Client.logout({
       logoutParams: {
         returnTo: window.location.origin,
       },
+    });
+  }
+
+  async forceLogOut() {
+    this.updateUserDetails(null);
+
+    // We don't want to reload the page in development as we'll lose the logs:
+    if (process.env.NODE_ENV !== "production") return;
+
+    return this.logOut().catch((err) => {
+      console.warn(err instanceof Error ? err.message : err);
     });
   }
 

@@ -1,6 +1,9 @@
-import { AuthorizationParams as Auth0AuthorizationParams } from "@auth0/auth0-spa-js";
-import { JwtPayload } from "jwt-decode";
+import {
+  AuthorizationParams as Auth0AuthorizationParams,
+  User,
+} from "@auth0/auth0-spa-js";
 import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
+import type { JwtPayload } from "jwt-decode";
 
 // Auth0:
 
@@ -30,20 +33,30 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
 
 // JWT data:
 
-// TODO: Extend Auth0's User type and maybe remove and uninstall JwtPayload
-
 export interface UserDetails {
-  // Default from Auth0:
+  // Default from Auth0's User:
   sub: string;
   name: string;
   givenName: string;
+  middleName: string;
   familyName: string;
   nickname: string;
+  preferredUsername: string;
+  profile: string;
   picture: string;
+  website: string;
   locale: string;
+  updatedAt: string;
   email: string;
   emailVerified: boolean;
-  expiration: number;
+
+  // Default but unused from Auth0's User:
+  // gender: string;
+  // birthdate: string;
+  // zoneinfo: string;
+  // phoneNumber: string;
+  // phoneNumberVerified: boolean;
+  // address: string;
 
   // Custom from Auth0's Add User Metadata action:
   owner: B64UrlString; // Public key derived from `sub`.
@@ -51,18 +64,9 @@ export interface UserDetails {
   authSystem: "KMS";
 }
 
-export interface IdTokenWithData<D = void> extends JwtPayload {
-  // Default from Auth0:
-  given_name: string;
-  family_name: string;
-  nickname: string;
-  picture: string;
-  locale: string;
-  updated_at: string;
-  email: string;
-  email_verified: boolean;
+export interface IdTokenWithData<D = void> extends JwtPayload, User {
+  // Non-default from Auth0:
   nonce: string;
-  name: string;
   sid: string;
 
   // Custom from Auth0's Add User Metadata action:

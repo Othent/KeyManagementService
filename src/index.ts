@@ -133,8 +133,7 @@ export interface AppInfo {
 }
 
 export class Othent
-  implements
-    Omit<ArConnect, "connect" | "signDataItem" | "addToken" | "isTokenAdded">
+  implements Omit<ArConnect, "connect" | "addToken" | "isTokenAdded">
 {
   static walletName = CLIENT_NAME;
 
@@ -162,10 +161,13 @@ export class Othent
 
   gatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
+  // TODO: Cross-tab support.
+
+  // TODO: Add B64 / B64Encoded support (e.g. option on encrypt to return B64Encoded, make decrypt accept a B64 input, make all signature functions return B64Encoded results...)
+
   // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
 
-  // TODO: Exclude expiration from auth event user details to avoid firing the event so often! Also, users don't need to know, as they'll get notified when it
-  // expires.
+  // TODO: Test new playground with old SDK?
 
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     let { crypto: cryptoOption, ...configOptions } = options;
@@ -270,10 +272,9 @@ export class Othent
     }
   }
 
-  // TODO: Remove?
-  // async init() {
-  //   await this.auth0.init();
-  // }
+  get isReady() {
+    return this.auth0.isReady;
+  }
 
   // ERROR EVENT / ERROR HANDLING:
 
@@ -486,10 +487,7 @@ export class Othent
 
     // No need to await here as we don't really care about waiting for this:
 
-    // TODO: Re-enable in production?
-    // this.auth0.logOut().catch((err) => {
-    //   console.warn(err instanceof Error ? err.message : err);
-    // });
+    this.auth0.forceLogOut();
 
     throw new Error("Unexpected authentication error");
   }
@@ -695,6 +693,7 @@ export class Othent
 
     try {
       // TODO: Try with a bunch of different nodes and/or retry?
+      // TODO: Use axios-retry here?
 
       const res = await axios.post<ArDriveBundledTransactionResponseData>(
         url,
@@ -759,7 +758,7 @@ export class Othent
    * @param ciphertext The data to decrypt.
    * @returns The decrypted data.
    */
-  async decrypt(ciphertext: string | BinaryDataType): Promise<string> {
+  async decrypt(ciphertext: BinaryDataType): Promise<string> {
     const { sub } = await this.ensureRequiredUserDataOrThrow();
 
     const plaintext = await this.api.decrypt(ciphertext, sub);
@@ -789,7 +788,7 @@ export class Othent
    * @param dataItem The data to sign.
    * @returns The signed data item.
    */
-  async signDataItem(dataItem: DataItem): Promise<Buffer> {
+  async signDataItem(dataItem: DataItem): Promise<ArrayBufferLike> {
     const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
 
     const { data, tags, ...options } = dataItem;
@@ -801,7 +800,7 @@ export class Othent
       ownerLength: 512,
       sign: this.api.getSignerSignFn(sub),
       // Note we don't provide `verify` as it's not used anyway:
-      // verify: null,
+      // verify: () => true,
     };
 
     const opts: DataItemCreateOptions = {
@@ -814,10 +813,17 @@ export class Othent
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
     await dataItemInstance.sign(signer);
 
-    // TODO: ArConnects types the return type as ArrayBuffer, but in the example this goes straight into the DataItem constructor, which only accepts Buffer.
-    // new DataItem(dataItemInstance.getRaw().buffer);
-    // return dataItemInstance.getRaw().buffer;
-    return dataItemInstance.getRaw();
+    // TODO: ArConnects types the return type as ArrayBuffer, but in the example that goes straight into the `DataItem`
+    // constructor, which only accepts Buffer, so this is not valid:
+    //     new DataItem(dataItemInstance.getRaw().buffer);
+    // Instead, we need to do:
+    //     new DataItem(Buffer.from(dataItemInstance.getRaw().buffer));
+    // Otherwise, if ArConnect's example is fine, the types are wrong and this function actually returns `Buffer`:
+    //     new DataItem(dataItemInstance.getRaw());
+    // In Othent's case, we prefer to return `ArrayBuffer`, as the return type from `dataItemInstance.getRaw()` cannot
+    // be handled bu the test repo's `replacer()` function so it doesn't seem to be a "proper" `Buffer` anyway.
+
+    return dataItemInstance.getRaw().buffer;
   }
 
   /**
@@ -897,11 +903,11 @@ export class Othent
 
   async privateHash(
     data: string | BinaryDataType,
-    options: SignMessageOptions,
+    options?: SignMessageOptions,
   ): Promise<Uint8Array> {
     return hash(
       binaryDataTypeOrStringToBinaryDataType(data),
-      options.hashAlgorithm,
+      options?.hashAlgorithm,
     );
   }
 
