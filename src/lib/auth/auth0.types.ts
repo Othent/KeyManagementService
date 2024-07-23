@@ -5,6 +5,24 @@ import {
 import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
 import type { JwtPayload } from "jwt-decode";
 import { RemoveIndexSignature } from "../utils/typescript/type-utils.types";
+import {
+  AppInfo,
+  Auth0Strategy,
+  OthentStorageKey,
+} from "../config/config.types";
+
+// OthentAuth0Client:
+
+export interface OthentAuth0ClientOptions {
+  domain: string;
+  clientId: string;
+  strategy: Auth0Strategy;
+  refreshTokenExpirationMs: number;
+  appInfo: AppInfo;
+  initialUserDetails?: UserDetails | null;
+  cookieKey: OthentStorageKey | null;
+  localStorageKey: OthentStorageKey | null;
+}
 
 // Auth0:
 
@@ -15,7 +33,23 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
   transaction_input: string;
 };
 
-// JWT data:
+// User JWT data:
+
+export interface IdTokenWithData<D = void> extends JwtPayload, User {
+  // Non-default from Auth0:
+  nonce: string;
+  sid: string;
+
+  // Custom from Auth0's Add User Metadata action:
+  owner: B64UrlString; // Public key derived from `sub`.
+  walletAddress: B64UrlString; // Wallet address derived from `owner`.
+  authSystem: "KMS";
+
+  // Extra data also added to the token in Add User Metadata action when calling functions other than createUser:
+  data: void extends D ? never : D;
+}
+
+// User details:
 
 export interface UserDetails {
   // Default from Auth0's User:
@@ -48,18 +82,10 @@ export interface UserDetails {
   authSystem: "KMS";
 }
 
-export interface IdTokenWithData<D = void> extends JwtPayload, User {
-  // Non-default from Auth0:
-  nonce: string;
-  sid: string;
-
-  // Custom from Auth0's Add User Metadata action:
-  owner: B64UrlString; // Public key derived from `sub`.
-  walletAddress: B64UrlString; // Wallet address derived from `owner`.
-  authSystem: "KMS";
-
-  // Extra data also added to the token in Add User Metadata action when calling functions other than createUser:
-  data: void extends D ? never : D;
+export interface StoredUserDetails {
+  userDetails: UserDetails;
+  createdAt: string;
+  expiredBy: string;
 }
 
 // JWT token data / encodeToken():

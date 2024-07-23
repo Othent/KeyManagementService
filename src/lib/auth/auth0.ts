@@ -10,6 +10,8 @@ import {
   IdTokenWithData,
   UserDetails,
   TransactionInput,
+  OthentAuth0ClientOptions,
+  StoredUserDetails,
 } from "./auth0.types";
 import {
   CLIENT_NAME,
@@ -18,7 +20,12 @@ import {
 } from "../config/config.constants";
 import { EventListenersHandler } from "../utils/events/event-listener-handler";
 import { AuthListener } from "../othent/othent.types";
-import { AppInfo, Auth0Strategy } from "../config/config.types";
+import {
+  AppInfo,
+  Auth0Strategy,
+  OthentStorageKey,
+} from "../config/config.types";
+import { cookieStorage } from "../utils/cookies/cookie-storage";
 
 export class OthentAuth0Client {
   private auth0ClientPromise: Promise<Auth0Client | null> =
@@ -26,20 +33,28 @@ export class OthentAuth0Client {
 
   private authEventListenerHandler = new EventListenersHandler<AuthListener>({
     diffParams: true,
+    replyOnListen: true,
   });
 
   private userDetails: UserDetails | null = null;
 
   private userDetailsExpirationTimeoutID = 0;
 
+  private cookieKey: OthentStorageKey | null = null;
+
+  private localStorageKey: OthentStorageKey | null = null;
+
+  private refreshTokenExpirationMs =
+    +DEFAULT_OTHENT_CONFIG.auth0RefreshTokenExpirationMs;
+
   private appInfo: AppInfo = {
     name: "",
     version: "",
   };
 
-  private refreshTokenExpirationMs = +DEFAULT_OTHENT_CONFIG.auth0RefreshTokenExpirationMs;
-
   isReady = false;
+
+  isAuthenticated = false;
 
   static isIdTokenValidUser<D>(idToken: IdTokenWithData<D>): boolean {
     // Note that we are not checking the ID Token `exp` field, which is typically 24 hours. We don't care about that
@@ -76,22 +91,21 @@ export class OthentAuth0Client {
     };
   }
 
-  constructor(
-    domain: string,
-    clientId: string,
-    strategy: Auth0Strategy,
-    refreshTokenExpirationMs: number,
-    appInfo: AppInfo,
-  ) {
-    // TODO: Should we be able to provide an initial value for `userDetails` from a cookie / localStorage or whatever?
-
+  constructor({
+    domain,
+    clientId,
+    strategy,
+    cookieKey,
+    localStorageKey,
+    refreshTokenExpirationMs,
+    appInfo,
+    initialUserDetails,
+  }: OthentAuth0ClientOptions) {
     const useRefreshTokens = strategy !== "iframe-cookies";
 
     const cacheLocation: CacheLocation | undefined = (
       useRefreshTokens ? strategy.replace("refresh-", "") : "memory"
     ) as CacheLocation;
-
-    this.refreshTokenExpirationMs = refreshTokenExpirationMs;
 
     this.auth0ClientPromise = createAuth0Client({
       domain,
@@ -108,34 +122,20 @@ export class OthentAuth0Client {
       return Auth0Client;
     });
 
+    this.cookieKey = cookieKey;
+
+    this.localStorageKey = localStorageKey;
+
+    this.refreshTokenExpirationMs = refreshTokenExpirationMs;
+
     this.appInfo = appInfo;
+
+    this.restoreUserDetails(initialUserDetails || null);
+
+    this.handleStorage = this.handleStorage.bind(this);
   }
 
-  private updateUserDetails<D>(
-    idToken: IdTokenWithData<D> | null,
-  ): UserDetails | null {
-    window.clearTimeout(this.userDetailsExpirationTimeoutID);
-
-    const nextUserDetails: UserDetails | null =
-      idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
-        ? OthentAuth0Client.getUserDetails(idToken)
-        : null;
-
-    this.authEventListenerHandler.emit(nextUserDetails);
-
-    if (nextUserDetails) {
-      this.userDetailsExpirationTimeoutID = window.setTimeout(
-        this.logOut,
-        this.refreshTokenExpirationMs,
-      );
-    }
-
-    // TODO: Persist in localStorage / cookie for cross-tab synching / SSR?
-
-    return (this.userDetails = nextUserDetails);
-  }
-
-  // Getters & Setters:
+  // Getters / Setters:
 
   getAuthEventListenerHandler() {
     return this.authEventListenerHandler;
@@ -143,6 +143,140 @@ export class OthentAuth0Client {
 
   setAppInfo(appInfo: AppInfo) {
     this.appInfo = appInfo;
+  }
+
+  // Storage listeners:
+
+  initStorageSyncing() {
+    if (this.localStorageKey) {
+      window.addEventListener("storage", this.handleStorage);
+    } else {
+      console.warn('Calling `Othent.init` is a NOOP unless the `localStorageKey` option is used.');
+    }
+  }
+
+  stopStorageSyncing() {
+    window.removeEventListener("storage", this.handleStorage);
+  }
+
+  private handleStorage(event: StorageEvent) {
+    if (event.key !== this.localStorageKey) return;
+
+    if (event.newValue) {
+      this.restoreUserDetails();
+    } else {
+      this.logOut();
+    }
+  }
+
+  private persistUserDetails(userDetails: UserDetails | null) {
+    const { cookieKey, localStorageKey } = this;
+
+    if (cookieKey) {
+      if (userDetails) {
+        cookieStorage.setItem(cookieKey, JSON.stringify(userDetails));
+      } else if (cookieStorage.getItem(cookieKey) !== null) {
+        cookieStorage.removeItem(cookieKey);
+      }
+    }
+
+    if (localStorageKey) {
+      if (userDetails) {
+        const now = new Date();
+
+        const serializedUserDetails = JSON.stringify({
+          userDetails,
+          createdAt: now.toUTCString(),
+          expiredBy: new Date(
+            now.getTime() + this.refreshTokenExpirationMs,
+          ).toUTCString(),
+        } satisfies StoredUserDetails);
+
+        localStorage.setItem(localStorageKey, serializedUserDetails);
+      } else {
+        this.clearStoredUserDetails();
+      }
+    }
+  }
+
+  // `userDetails` setters:
+
+  private setUserDetails(
+    userDetails: UserDetails | null,
+    updateAuth = true
+  ) {
+    window.clearTimeout(this.userDetailsExpirationTimeoutID);
+
+    if (userDetails) {
+      this.userDetailsExpirationTimeoutID = window.setTimeout(
+        this.logOut,
+        this.refreshTokenExpirationMs,
+      );
+    }
+
+    const updatedAlreadyEmitted = this.authEventListenerHandler.emit(userDetails);
+
+    if (!updatedAlreadyEmitted) {
+      // Only update this object (its ref) if something has actually changed, just in case some code in user land
+      // is actually relaying on this ref only changing if the data changes too:
+      this.userDetails = userDetails;
+    }
+
+    if (updateAuth) {
+      // We don't update `isAuthenticated`, `localStorage` or `cookieStorage` if `setUserDetails` was called from `restoreUserDetails`:
+      this.isAuthenticated = !!userDetails;
+      this.persistUserDetails(userDetails);
+    }
+
+    return userDetails;
+  }
+
+  private restoreUserDetails(userDetails?: UserDetails | null) {
+    let initialUserDetails = userDetails || null;
+
+    if (!initialUserDetails && this.localStorageKey) {
+      try {
+        // TODO: Security risk if an attacker manipulates the stored values (depending what the app does with them).
+        // Mention it in the docs.
+
+        const storedUserDetails = JSON.parse(
+          localStorage.getItem(this.localStorageKey) || "null",
+        ) as StoredUserDetails | null;
+
+        if (storedUserDetails) {
+          const expiredBy = new Date(storedUserDetails.expiredBy).getTime();
+
+          if (!isNaN(expiredBy) && expiredBy > Date.now()) {
+            initialUserDetails = storedUserDetails.userDetails;
+          } else {
+            this.clearStoredUserDetails();
+          }
+        }
+      } catch (err) {
+        /* NOOP */
+      }
+    }
+
+    this.setUserDetails(initialUserDetails, false);
+  }
+
+  private clearStoredUserDetails() {
+    // We remove anything that starts with "othent" rather than just `localStorageKey` in case there are leftover
+    // entries from previous runs:
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('othent')) localStorage.removeItem(key);
+    });
+  }
+
+  private updateUserDetails<D>(
+    idToken: IdTokenWithData<D>,
+  ): UserDetails | null {
+    const nextUserDetails: UserDetails | null =
+      idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
+        ? OthentAuth0Client.getUserDetails(idToken)
+        : null;
+
+    return this.setUserDetails(nextUserDetails);
   }
 
   // Authorization params helper:
@@ -251,7 +385,15 @@ export class OthentAuth0Client {
         userDetails,
       };
     } catch (err) {
-      this.forceLogOut();
+      // This is probably not needed / too drastic. Let the application handle the error:
+      //
+      // if (
+      //   err instanceof Error &&
+      //   err.message !== "Login required" &&
+      //   !err.message.startsWith("Missing Refresh Token")
+      // ) {
+      //   this.logOut();
+      // }
 
       throw err;
     }
@@ -283,27 +425,28 @@ export class OthentAuth0Client {
   }
 
   async logOut() {
+    this.setUserDetails(null);
+
     const auth0Client = await this.auth0ClientPromise;
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    this.updateUserDetails(null);
+    if (process.env.NODE_ENV !== "production") {
+      alert(" The page will reload after closing this Alert. Preserve your logs if needed.");
+    }
 
     return auth0Client.logout({
       logoutParams: {
         returnTo: window.location.origin,
       },
-    });
-  }
-
-  async forceLogOut() {
-    this.updateUserDetails(null);
-
-    // We don't want to reload the page in development as we'll lose the logs:
-    if (process.env.NODE_ENV !== "production") return;
-
-    return this.logOut().catch((err) => {
+    }).catch((err) => {
       console.warn(err instanceof Error ? err.message : err);
+
+      if (process.env.NODE_ENV !== "production") {
+        alert(`Auth0Client.logout() has throw an error:\n\n${ err instanceof Error ? err.message : err }. The page will reload after closing this Alert.`);
+      }
+
+      window.location.reload();
     });
   }
 

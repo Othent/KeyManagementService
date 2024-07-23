@@ -1,6 +1,6 @@
 import { Tag } from "warp-arbundles";
 import { GatewayConfig } from "../utils/arconnect/arconnect.types";
-import { OthentConfig, OthentOptions } from "./config.types";
+import { OthentConfig, OthentOptions, OthentStorageKey } from "./config.types";
 import { UrlString } from "../utils/typescript/url.types";
 
 export const DEFAULT_OTHENT_CONFIG = {
@@ -10,12 +10,16 @@ export const DEFAULT_OTHENT_CONFIG = {
   auth0RefreshTokenExpirationMs: 1296000000, // 2 weeks
   serverBaseURL: "https://kms-server.othent.io",
   autoConnect: "lazy",
+  cookieKey: null,
+  localStorageKey: null,
   throwErrors: true,
   tags: [],
 } as const satisfies OthentConfig;
 
 export const DEFAULT_OTHENT_OPTIONS = {
   ...DEFAULT_OTHENT_CONFIG,
+  cookie: false,
+  localStorage: false,
   appName: "",
   appVersion: "",
 } as const satisfies OthentOptions;
@@ -28,6 +32,14 @@ export const DEFAULT_GATEWAY_CONFIG = {
 
 export const DEFAULT_DISPATCH_NODE =
   "https://turbo.ardrive.io" as const satisfies UrlString;
+
+export const DEFAULT_COOKIE_KEY =
+  "othentUserDetails" as const satisfies OthentStorageKey;
+
+export const DEFAULT_LOCAL_STORAGE_KEY =
+  "othentUserDetails" as const satisfies OthentStorageKey;
+
+// SKD version / analytics:
 
 export const CLIENT_NAME = "Othent KMS" as const;
 

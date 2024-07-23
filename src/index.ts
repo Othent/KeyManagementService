@@ -16,6 +16,8 @@ export {
   DEFAULT_OTHENT_OPTIONS,
   DEFAULT_GATEWAY_CONFIG,
   DEFAULT_DISPATCH_NODE,
+  DEFAULT_COOKIE_KEY,
+  DEFAULT_LOCAL_STORAGE_KEY,
   // CLIENT_NAME,     // Already exported as static member
   // CLIENT_VERSION,  // Already exported as static member
   // ANALYTICS_TAGS,  // Not needed

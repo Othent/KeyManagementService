@@ -19,6 +19,7 @@ import {
   ANALYTICS_TAGS,
   CLIENT_NAME,
   CLIENT_VERSION,
+  DEFAULT_COOKIE_KEY,
   DEFAULT_DISPATCH_NODE,
   DEFAULT_GATEWAY_CONFIG,
   DEFAULT_OTHENT_CONFIG,
@@ -84,8 +85,6 @@ export class Othent
 
   gatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
-  // TODO: Cross-tab support.
-
   // TODO: Add B64 / B64Encoded support (e.g. option on encrypt to return B64Encoded, make decrypt accept a B64 input, make all signature functions return B64Encoded results...)
 
   // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
@@ -93,13 +92,49 @@ export class Othent
   // TODO: Test new playground with old SDK?
 
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
-    let { crypto: cryptoOption, ...configOptions } = options;
+    let {
+      crypto: cryptoOption,
+      appName,
+      appVersion,
+      initialUserDetails,
+      cookie,
+      localStorage,
+      ...configOptions
+    } = options;
 
-    this.config = { ...DEFAULT_OTHENT_CONFIG, ...configOptions };
+    this.config = {
+      ...DEFAULT_OTHENT_CONFIG,
+      ...configOptions,
+      cookieKey:
+        typeof cookie === "string"
+          ? cookie
+          : cookie
+            ? DEFAULT_COOKIE_KEY
+            : null,
+      localStorageKey:
+        typeof localStorage === "string"
+          ? localStorage
+          : localStorage
+            ? DEFAULT_COOKIE_KEY
+            : null,
+    };
+
+    const { cookieKey, localStorageKey } = this.config;
+
+    if (typeof cookieKey === "string" && !cookieKey.startsWith("othent")) {
+      throw new Error('`cookieKey` must start with "othent".');
+    }
+
+    if (
+      typeof localStorageKey === "string" &&
+      !localStorageKey.startsWith("othent")
+    ) {
+      throw new Error('`cookieKey` must start with "othent".');
+    }
 
     this.appInfo = {
-      name: options.appName,
-      version: options.appVersion,
+      name: appName,
+      version: appVersion,
     };
 
     let crypto = cryptoOption;
@@ -129,13 +164,16 @@ export class Othent
 
     this.crypto = crypto!;
 
-    this.auth0 = new OthentAuth0Client(
-      config.auth0Domain,
-      config.auth0ClientId,
-      config.auth0Strategy,
-      config.auth0RefreshTokenExpirationMs,
-      this.appInfo,
-    );
+    this.auth0 = new OthentAuth0Client({
+      domain: config.auth0Domain,
+      clientId: config.auth0ClientId,
+      strategy: config.auth0Strategy,
+      cookieKey: config.cookieKey,
+      localStorageKey: config.localStorageKey,
+      refreshTokenExpirationMs: config.auth0RefreshTokenExpirationMs,
+      appInfo: this.appInfo,
+      initialUserDetails,
+    });
 
     if (this.config.autoConnect === "eager") {
       this.connect();
@@ -206,6 +244,15 @@ export class Othent
         console.log(` ${key.padStart(13)} = ${value}`);
       });
     }
+  }
+
+  init() {
+    this.auth0.initStorageSyncing();
+
+    return () => {
+      // TODO: Add an option to clear localStorage if we only want it to sync tabs or add a new option to do that onunload?
+      this.auth0.stopStorageSyncing();
+    };
   }
 
   get isReady() {
@@ -291,11 +338,16 @@ export class Othent
 
   // AUTH LOADING:
 
-  private async ensureRequiredUserDataOrThrow() {
-    if (
-      this.config.autoConnect !== "off" &&
-      !this.auth0.getCachedUserDetails()
-    ) {
+  get isAuthenticated() {
+    return this.auth0.isAuthenticated;
+  }
+
+  requireAuth() {
+    return this.requireUserDataOrThrow().then(() => {});
+  }
+
+  private async requireUserDataOrThrow() {
+    if (this.config.autoConnect !== "off" && !this.auth0.isAuthenticated) {
       await this.connect(undefined, undefined, this.gatewayConfig);
     }
 
@@ -367,8 +419,8 @@ export class Othent
     if (!id_token) {
       try {
         // If we made it this far but we don't have a token, we need to log in, so we call `logIn()`. If everything goes
-        // well, `logIn()` will internally call `getTokenSilently()` again after successful authentication, and return a
-        // valid token with the user data:
+        // well, `logIn()` will internally call `getTokenSilently()` again after
+        // successful authentication, and return a valid token with the user data:
 
         const response = await this.auth0.logIn();
 
@@ -424,7 +476,7 @@ export class Othent
 
     // No need to await here as we don't really care about waiting for this:
 
-    this.auth0.forceLogOut();
+    this.auth0.logOut();
 
     throw new Error("Unexpected authentication error");
   }
@@ -571,7 +623,7 @@ export class Othent
    * @returns The signed version of the transaction.
    */
   async sign(transaction: Transaction): Promise<Transaction> {
-    const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
+    const { sub, publicKey } = await this.requireUserDataOrThrow();
 
     transaction.setOwner(publicKey);
 
@@ -598,7 +650,7 @@ export class Othent
    * @returns The signed version of the transaction.
    */
   async dispatch(transaction: Transaction, options?: DispatchOptions) {
-    const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
+    const { sub, publicKey } = await this.requireUserDataOrThrow();
 
     const signer: Signer = {
       publicKey: toBuffer(publicKey),
@@ -683,7 +735,7 @@ export class Othent
    * @returns The encrypted data.
    */
   async encrypt(plaintext: string | BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.ensureRequiredUserDataOrThrow();
+    const { sub } = await this.requireUserDataOrThrow();
 
     const ciphertextBuffer = await this.api.encrypt(plaintext, sub);
 
@@ -696,7 +748,7 @@ export class Othent
    * @returns The decrypted data.
    */
   async decrypt(ciphertext: BinaryDataType): Promise<string> {
-    const { sub } = await this.ensureRequiredUserDataOrThrow();
+    const { sub } = await this.requireUserDataOrThrow();
 
     const plaintext = await this.api.decrypt(ciphertext, sub);
 
@@ -713,7 +765,7 @@ export class Othent
    * @returns The {@linkcode Buffer} format of the signature.
    */
   async signature(data: string | BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.ensureRequiredUserDataOrThrow();
+    const { sub } = await this.requireUserDataOrThrow();
 
     const signatureBuffer = await this.api.sign(data, sub);
 
@@ -726,7 +778,7 @@ export class Othent
    * @returns The signed data item.
    */
   async signDataItem(dataItem: DataItem): Promise<ArrayBufferLike> {
-    const { sub, publicKey } = await this.ensureRequiredUserDataOrThrow();
+    const { sub, publicKey } = await this.requireUserDataOrThrow();
 
     const { data, tags, ...options } = dataItem;
 
@@ -762,7 +814,7 @@ export class Othent
     data: string | BinaryDataType,
     options?: SignMessageOptions,
   ): Promise<Uint8Array> {
-    const { sub } = await this.ensureRequiredUserDataOrThrow();
+    const { sub } = await this.requireUserDataOrThrow();
 
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
@@ -788,7 +840,7 @@ export class Othent
     options: SignMessageOptions = { hashAlgorithm: "SHA-256" },
   ): Promise<boolean> {
     if (!publicKey) {
-      const requiredUserData = await this.ensureRequiredUserDataOrThrow();
+      const requiredUserData = await this.requireUserDataOrThrow();
 
       publicKey ||= requiredUserData.publicKey;
     }

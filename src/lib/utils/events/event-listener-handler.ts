@@ -2,6 +2,7 @@ export type BaseEventListener = (...args: any) => any;
 
 export interface EventListenersOptions<T extends BaseEventListener> {
   diffParams: boolean;
+  replyOnListen: boolean;
   getUpdateIdTransform?: (parameters: Parameters<T>) => any;
 }
 
@@ -12,8 +13,11 @@ export class EventListenersHandler<T extends BaseEventListener> {
 
   private lastEmittedUpdateId = "";
 
+  private lastEmittedParams: Parameters<T> | null = null;
+
   private options: EventListenersOptions<T> = {
     diffParams: false,
+    replyOnListen: false,
   };
 
   constructor(options?: Partial<EventListenersOptions<T>>) {
@@ -44,6 +48,8 @@ export class EventListenersHandler<T extends BaseEventListener> {
 
   add(listener: T) {
     this.listeners.add(listener);
+
+    if (this.options.replyOnListen && this.lastEmittedParams) this.emit(...this.lastEmittedParams)
   }
 
   delete(listener: T) {
@@ -53,12 +59,14 @@ export class EventListenersHandler<T extends BaseEventListener> {
   emit(...parameters: Parameters<T>) {
     const { initializedListeners, lastEmittedUpdateId } = this;
     const updateId = this.getUpdateId(parameters);
+    const updatedAlreadyEmitted = lastEmittedUpdateId === updateId;
 
     this.lastEmittedUpdateId = updateId;
+    this.lastEmittedParams = parameters;
 
     this.listeners.forEach((listenerFn) => {
       if (
-        lastEmittedUpdateId === updateId &&
+        updatedAlreadyEmitted &&
         initializedListeners.has(listenerFn)
       )
         return;
@@ -71,5 +79,7 @@ export class EventListenersHandler<T extends BaseEventListener> {
         /* NOOP */
       }
     });
+
+    return updatedAlreadyEmitted;
   }
 }
