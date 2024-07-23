@@ -18,7 +18,6 @@ export {
   DEFAULT_DISPATCH_NODE,
   // CLIENT_NAME,     // Already exported as static member
   // CLIENT_VERSION,  // Already exported as static member
-  // DEFAULT_REFRESH_TOKEN_EXPIRATION_MS, // TODO: This should be an option
   // ANALYTICS_TAGS,  // Not needed
 } from "./lib/config/config.constants";
 

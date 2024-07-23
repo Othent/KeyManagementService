@@ -11,6 +11,7 @@ export interface OthentConfig {
   auth0Domain: string;
   auth0ClientId: string;
   auth0Strategy: Auth0Strategy;
+  auth0RefreshTokenExpirationMs: number;
   serverBaseURL: string;
   autoConnect: AutoConnect;
   throwErrors: boolean;

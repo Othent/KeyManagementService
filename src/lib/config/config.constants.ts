@@ -7,6 +7,7 @@ export const DEFAULT_OTHENT_CONFIG = {
   auth0Domain: "auth.othent.io",
   auth0ClientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
   auth0Strategy: "iframe-cookies",
+  auth0RefreshTokenExpirationMs: 1296000000, // 2 weeks
   serverBaseURL: "https://kms-server.othent.io",
   autoConnect: "lazy",
   throwErrors: true,
@@ -32,9 +33,6 @@ export const CLIENT_NAME = "Othent KMS" as const;
 
 // TODO: Get this from package.json:
 export const CLIENT_VERSION = "1.0.12" as const;
-
-// TODO: Pass it as an option?
-export const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = 1296000000 as const; // 2 weeks
 
 export const ANALYTICS_TAGS = [
   {

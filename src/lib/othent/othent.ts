@@ -116,9 +116,11 @@ export class Othent
       }
     }
 
+    const { config } = this;
+
     if (
-      this.config.autoConnect === "eager" &&
-      this.config.auth0Strategy === "refresh-memory"
+      config.autoConnect === "eager" &&
+      config.auth0Strategy === "refresh-memory"
     ) {
       throw new Error(
         'In-memory refresh tokens cannot be used with `autoConnect = "eager"`. Use `autoConnect = "lazy"` instead',
@@ -128,9 +130,10 @@ export class Othent
     this.crypto = crypto!;
 
     this.auth0 = new OthentAuth0Client(
-      this.config.auth0Domain,
-      this.config.auth0ClientId,
-      this.config.auth0Strategy,
+      config.auth0Domain,
+      config.auth0ClientId,
+      config.auth0Strategy,
+      config.auth0RefreshTokenExpirationMs,
       this.appInfo,
     );
 
@@ -138,7 +141,7 @@ export class Othent
       this.connect();
     }
 
-    if (!this.config.throwErrors) {
+    if (!config.throwErrors) {
       const walletMethods = [
         "connect",
         "disconnect",
@@ -199,7 +202,7 @@ export class Othent
     if (process.env.NODE_ENV === "development") {
       console.log(`${this.walletName} @ ${this.walletVersion}`);
 
-      Object.entries(this.config).map(([key, value]) => {
+      Object.entries(config).map(([key, value]) => {
         console.log(` ${key.padStart(13)} = ${value}`);
       });
     }

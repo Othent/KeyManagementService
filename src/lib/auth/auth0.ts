@@ -14,7 +14,7 @@ import {
 import {
   CLIENT_NAME,
   CLIENT_VERSION,
-  DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
+  DEFAULT_OTHENT_CONFIG,
 } from "../config/config.constants";
 import { EventListenersHandler } from "../utils/events/event-listener-handler";
 import { AuthListener } from "../othent/othent.types";
@@ -36,6 +36,8 @@ export class OthentAuth0Client {
     name: "",
     version: "",
   };
+
+  private refreshTokenExpirationMs = +DEFAULT_OTHENT_CONFIG.auth0RefreshTokenExpirationMs;
 
   isReady = false;
 
@@ -78,6 +80,7 @@ export class OthentAuth0Client {
     domain: string,
     clientId: string,
     strategy: Auth0Strategy,
+    refreshTokenExpirationMs: number,
     appInfo: AppInfo,
   ) {
     // TODO: Should we be able to provide an initial value for `userDetails` from a cookie / localStorage or whatever?
@@ -87,6 +90,8 @@ export class OthentAuth0Client {
     const cacheLocation: CacheLocation | undefined = (
       useRefreshTokens ? strategy.replace("refresh-", "") : "memory"
     ) as CacheLocation;
+
+    this.refreshTokenExpirationMs = refreshTokenExpirationMs;
 
     this.auth0ClientPromise = createAuth0Client({
       domain,
@@ -121,7 +126,7 @@ export class OthentAuth0Client {
     if (nextUserDetails) {
       this.userDetailsExpirationTimeoutID = window.setTimeout(
         this.logOut,
-        DEFAULT_REFRESH_TOKEN_EXPIRATION_MS,
+        this.refreshTokenExpirationMs,
       );
     }
 
