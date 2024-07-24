@@ -631,6 +631,7 @@ export class Othent
   async sign(transaction: Transaction): Promise<Transaction> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
 
+    // TODO: We should probably create a new transaction instead of updating the one passed as param:
     transaction.setOwner(publicKey);
 
     this.addCommonTags(transaction);
