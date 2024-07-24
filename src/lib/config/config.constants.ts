@@ -6,7 +6,7 @@ import { UrlString } from "../utils/typescript/url.types";
 export const DEFAULT_OTHENT_CONFIG = {
   auth0Domain: "auth.othent.io",
   auth0ClientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
-  auth0Strategy: "iframe-cookies",
+  auth0Strategy: "refresh-memory",
   auth0RefreshTokenExpirationMs: 1296000000, // 2 weeks
   serverBaseURL: "https://kms-server.othent.io",
   autoConnect: "lazy",
