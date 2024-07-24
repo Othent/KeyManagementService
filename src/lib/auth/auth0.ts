@@ -151,7 +151,9 @@ export class OthentAuth0Client {
     if (this.localStorageKey) {
       window.addEventListener("storage", this.handleStorage);
     } else {
-      console.warn('Calling `Othent.init` is a NOOP unless the `localStorageKey` option is used.');
+      console.warn(
+        "Calling `Othent.init` is a NOOP unless the `localStorageKey` option is used.",
+      );
     }
   }
 
@@ -201,10 +203,7 @@ export class OthentAuth0Client {
 
   // `userDetails` setters:
 
-  private setUserDetails(
-    userDetails: UserDetails | null,
-    updateAuth = true
-  ) {
+  private setUserDetails(userDetails: UserDetails | null, updateAuth = true) {
     window.clearTimeout(this.userDetailsExpirationTimeoutID);
 
     if (userDetails) {
@@ -214,7 +213,8 @@ export class OthentAuth0Client {
       );
     }
 
-    const updatedAlreadyEmitted = this.authEventListenerHandler.emit(userDetails);
+    const updatedAlreadyEmitted =
+      this.authEventListenerHandler.emit(userDetails);
 
     if (!updatedAlreadyEmitted) {
       // Only update this object (its ref) if something has actually changed, just in case some code in user land
@@ -236,9 +236,6 @@ export class OthentAuth0Client {
 
     if (!initialUserDetails && this.localStorageKey) {
       try {
-        // TODO: Security risk if an attacker manipulates the stored values (depending what the app does with them).
-        // Mention it in the docs.
-
         const storedUserDetails = JSON.parse(
           localStorage.getItem(this.localStorageKey) || "null",
         ) as StoredUserDetails | null;
@@ -264,7 +261,7 @@ export class OthentAuth0Client {
     // We remove anything that starts with "othent" rather than just `localStorageKey` in case there are leftover
     // entries from previous runs:
     Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('othent')) localStorage.removeItem(key);
+      if (key.startsWith("othent")) localStorage.removeItem(key);
     });
   }
 
@@ -432,22 +429,28 @@ export class OthentAuth0Client {
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
     if (process.env.NODE_ENV !== "production") {
-      alert(" The page will reload after closing this Alert. Preserve your logs if needed.");
+      alert(
+        " The page will reload after closing this Alert. Preserve your logs if needed.",
+      );
     }
 
-    return auth0Client.logout({
-      logoutParams: {
-        returnTo: window.location.origin,
-      },
-    }).catch((err) => {
-      console.warn(err instanceof Error ? err.message : err);
+    return auth0Client
+      .logout({
+        logoutParams: {
+          returnTo: window.location.origin,
+        },
+      })
+      .catch((err) => {
+        console.warn(err instanceof Error ? err.message : err);
 
-      if (process.env.NODE_ENV !== "production") {
-        alert(`Auth0Client.logout() has throw an error:\n\n${ err instanceof Error ? err.message : err }. The page will reload after closing this Alert.`);
-      }
+        if (process.env.NODE_ENV !== "production") {
+          alert(
+            `Auth0Client.logout() has throw an error:\n\n${err instanceof Error ? err.message : err}. The page will reload after closing this Alert.`,
+          );
+        }
 
-      window.location.reload();
-    });
+        window.location.reload();
+      });
   }
 
   async encodeToken(data?: CryptoOperationData) {

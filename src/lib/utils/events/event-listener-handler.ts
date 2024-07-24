@@ -49,7 +49,8 @@ export class EventListenersHandler<T extends BaseEventListener> {
   add(listener: T) {
     this.listeners.add(listener);
 
-    if (this.options.replyOnListen && this.lastEmittedParams) this.emit(...this.lastEmittedParams)
+    if (this.options.replyOnListen && this.lastEmittedParams)
+      this.emit(...this.lastEmittedParams);
   }
 
   delete(listener: T) {
@@ -65,11 +66,7 @@ export class EventListenersHandler<T extends BaseEventListener> {
     this.lastEmittedParams = parameters;
 
     this.listeners.forEach((listenerFn) => {
-      if (
-        updatedAlreadyEmitted &&
-        initializedListeners.has(listenerFn)
-      )
-        return;
+      if (updatedAlreadyEmitted && initializedListeners.has(listenerFn)) return;
 
       initializedListeners.add(listenerFn);
 
