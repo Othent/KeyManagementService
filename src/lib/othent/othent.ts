@@ -238,11 +238,13 @@ export class Othent
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
 
     if (process.env.NODE_ENV === "development") {
-      console.log(`${this.walletName} @ ${this.walletVersion}`);
+      console.group(`${this.walletName} @ ${this.walletVersion}`);
 
       Object.entries(config).map(([key, value]) => {
         console.log(` ${key.padStart(13)} = ${value}`);
       });
+
+      console.groupEnd();
     }
   }
 

@@ -214,7 +214,7 @@ export class OthentAuth0Client {
     }
 
     const updatedAlreadyEmitted =
-      this.authEventListenerHandler.emit(userDetails);
+      this.authEventListenerHandler.emit(userDetails, updateAuth ? !!userDetails : this.isAuthenticated);
 
     if (!updatedAlreadyEmitted) {
       // Only update this object (its ref) if something has actually changed, just in case some code in user land
