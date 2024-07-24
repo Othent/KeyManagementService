@@ -8,7 +8,10 @@ import { Tag as WarpBundleTag } from "warp-arbundles";
 
 export type OthentEventType = "auth" | "error";
 
-export type AuthListener = (userDetails: UserDetails | null, isAuthenticated: boolean) => void;
+export type AuthListener = (
+  userDetails: UserDetails | null,
+  isAuthenticated: boolean,
+) => void;
 
 export type ErrorListener = (err: Error | OthentError) => void;
 

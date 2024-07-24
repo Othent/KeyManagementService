@@ -22,7 +22,6 @@ import { EventListenersHandler } from "../utils/events/event-listener-handler";
 import { AuthListener } from "../othent/othent.types";
 import {
   AppInfo,
-  Auth0Strategy,
   OthentStorageKey,
 } from "../config/config.types";
 import { cookieStorage } from "../utils/cookies/cookie-storage";
@@ -213,8 +212,10 @@ export class OthentAuth0Client {
       );
     }
 
-    const updatedAlreadyEmitted =
-      this.authEventListenerHandler.emit(userDetails, updateAuth ? !!userDetails : this.isAuthenticated);
+    const updatedAlreadyEmitted = this.authEventListenerHandler.emit(
+      userDetails,
+      updateAuth ? !!userDetails : this.isAuthenticated,
+    );
 
     if (!updatedAlreadyEmitted) {
       // Only update this object (its ref) if something has actually changed, just in case some code in user land
