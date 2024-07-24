@@ -20,10 +20,7 @@ import {
 } from "../config/config.constants";
 import { EventListenersHandler } from "../utils/events/event-listener-handler";
 import { AuthListener } from "../othent/othent.types";
-import {
-  AppInfo,
-  OthentStorageKey,
-} from "../config/config.types";
+import { AppInfo, OthentStorageKey } from "../config/config.types";
 import { cookieStorage } from "../utils/cookies/cookie-storage";
 
 export class OthentAuth0Client {
