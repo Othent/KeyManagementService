@@ -105,7 +105,6 @@ export interface OthentConfig {
 
 export interface OthentOptions
   extends Partial<Omit<OthentConfig, "cookieKey" | "localStorageKey">> {
-
   /**
    * Name of your app. This will add a tag `App-Name: <appName>` to any transaction signed or sent using `Othent.sign`,
    * `Othent.dispatch` or `Othent.signDataItem`.
@@ -126,7 +125,7 @@ export interface OthentOptions
    *
    * @defaultValue `false`
    */
-  cookie: boolean | OthentStorageKey;
+  persistCookie: boolean | OthentStorageKey;
 
   /**
    * Set this to `true` or the name of the `localStorage` item where you'd like the user details JSON to be stored.
@@ -136,7 +135,7 @@ export interface OthentOptions
    *
    * @defaultValue `false`
    */
-  localStorage: boolean | OthentStorageKey;
+  persistLocalStorage: boolean | OthentStorageKey;
 
   /**
    * Initial user details. Useful for server-side rendered sites or native apps that might store the most recent user

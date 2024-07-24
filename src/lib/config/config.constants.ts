@@ -18,8 +18,8 @@ export const DEFAULT_OTHENT_CONFIG = {
 
 export const DEFAULT_OTHENT_OPTIONS = {
   ...DEFAULT_OTHENT_CONFIG,
-  cookie: false,
-  localStorage: false,
+  persistCookie: false,
+  persistLocalStorage: false,
   appName: "",
   appVersion: "",
 } as const satisfies OthentOptions;

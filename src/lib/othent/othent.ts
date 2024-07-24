@@ -72,6 +72,8 @@ export class Othent
   private errorEventListenerHandler =
     new EventListenersHandler<ErrorListener>();
 
+  private devAlertTimeoutID = 0;
+
   walletName = CLIENT_NAME;
 
   walletVersion = CLIENT_VERSION;
@@ -89,16 +91,14 @@ export class Othent
 
   // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
 
-  // TODO: Test new playground with old SDK?
-
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     let {
       crypto: cryptoOption,
       appName,
       appVersion,
       initialUserDetails,
-      cookie,
-      localStorage,
+      persistCookie,
+      persistLocalStorage,
       ...configOptions
     } = options;
 
@@ -106,15 +106,15 @@ export class Othent
       ...DEFAULT_OTHENT_CONFIG,
       ...configOptions,
       cookieKey:
-        typeof cookie === "string"
-          ? cookie
-          : cookie
+        typeof persistCookie === "string"
+          ? persistCookie
+          : persistCookie
             ? DEFAULT_COOKIE_KEY
             : null,
       localStorageKey:
-        typeof localStorage === "string"
-          ? localStorage
-          : localStorage
+        typeof persistLocalStorage === "string"
+          ? persistLocalStorage
+          : persistLocalStorage
             ? DEFAULT_COOKIE_KEY
             : null,
     };
@@ -246,6 +246,9 @@ export class Othent
     }
   }
 
+  /**
+   *
+   */
   init() {
     this.auth0.initStorageSyncing();
 
@@ -255,13 +258,14 @@ export class Othent
     };
   }
 
+  /**
+   *
+   */
   get isReady() {
     return this.auth0.isReady;
   }
 
   // ERROR EVENT / ERROR HANDLING:
-
-  private alertTimeoutID = 0;
 
   private onError(error: unknown) {
     if (!(error instanceof Error)) {
@@ -280,9 +284,9 @@ export class Othent
       );
 
       if (process.env.NODE_ENV === "development") {
-        window.clearTimeout(this.alertTimeoutID);
+        window.clearTimeout(this.devAlertTimeoutID);
 
-        this.alertTimeoutID = window.setTimeout(() => {
+        this.devAlertTimeoutID = window.setTimeout(() => {
           alert(
             'When using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`',
           );
