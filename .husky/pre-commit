@@ -5,3 +5,5 @@ sed -i -e "s/CLIENT_VERSION = \".*\"/CLIENT_VERSION = \"$packageVersion\"/" ./sr
 # Note there's no g flag used in the regular expression to make sure only one line is affected (just in case).
 
 pnpm lint-staged
+
+git update-index --again

@@ -44,7 +44,7 @@ export const DEFAULT_LOCAL_STORAGE_KEY =
 export const CLIENT_NAME = "Othent KMS" as const;
 
 // TODO: Get this from package.json:
-export const CLIENT_VERSION = "1.0.0" as const;
+export const CLIENT_VERSION = "2.0.0-beta.0" as const;
 
 export const ANALYTICS_TAGS = [
   {
