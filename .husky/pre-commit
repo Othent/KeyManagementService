@@ -1,6 +1,6 @@
 packageVersion=$(node -p -e "require('./package.json').version")
 
-sed -i -e 's/CLIENT_VERSION = ".*"/CLIENT_VERSION = "$packageVersion"/' ./src/lib/config/config.constants.ts
+sed -i -e "s/CLIENT_VERSION = \".*\"/CLIENT_VERSION = \"$packageVersion\"/" ./src/lib/config/config.constants.ts
 # -i = in-place edit
 # Note there's no g flag used in the regular expression to make sure only one line is affected (just in case).
 
