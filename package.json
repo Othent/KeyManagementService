@@ -67,5 +67,9 @@
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
+  },
+  "engines" : {
+    "pnpm" : ">=9.0.0",
+    "node" : ">=20.0.0 <22.0.0"
   }
 }

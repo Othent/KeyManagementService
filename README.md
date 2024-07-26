@@ -22,20 +22,42 @@ You can see this live on [kms-demo.othent.io](https://kms-demo.othent.io)
 
 ### Manually:
 
-1. Use [`pnpm version`](https://docs.npmjs.com/cli/v7/commands/npm-version) to bump the version, which will also make sure
+1. Manually update the package version (`CLIENT_VERSION`) in `config.constants.ts`.
+
+2. `pnpm build`.
+
+3. Commit your changes.
+
+4. Use [`pnpm version`](https://docs.npmjs.com/cli/v7/commands/npm-version) to bump the version, which will also make sure
 the next commit has the right tags.
 
-  - Stable release: `npm version patch`, `npm version minor` or `npm version major`.
-  - Pre-release: `npm version prerelease --preid=beta`, `npm version prepatch --preid=beta`, `npm version preminor --preid=beta`, `npm version premajor --preid=beta`.
+    **Stable release:**
 
-2. Manually update the package version (`CLIENT_VERSION`) in `config.constants.ts`.
+    ```
+    npm version patch
+    npm version minor
+    npm version major
+    ```
 
-3. `pnpm build`.
+
+    **Pre-release:**
+
+    ```
+    npm version prerelease --preid=beta
+    npm version prepatch --preid=beta
+    npm version preminor --preid=beta
+    npm version premajor --preid=beta
+    ```
 
 4. [`pnpm publish`](https://docs.npmjs.com/cli/v8/commands/npm-publish).
 
 <br />
 
+### Troubleshooting
+
+If you accidentally updated the `latest` tag, you can point it to another version with the following command:
+
+    npm dist-tag add @othent/kms@<version> latest
 
 ## This branch / PR:
 
@@ -49,6 +71,8 @@ the next commit has the right tags.
 
 **Stable Release:**
 
+- [x] Add `.npmrc`.
+- [ ] Add build / publish scripts.
 - [ ] Huskey to format on commit and custom pre-commit to update version.
 - [ ] Custom error.
 - [ ] Fix signDataItem signature verification.
