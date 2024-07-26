@@ -249,7 +249,10 @@ export class Othent
   }
 
   /**
+   * Start listening for `storage` events to sync user details across tabs. Only needed if `persistLocalStorage = true`.
    *
+   * @returns A cleanup function that must be called whenever Othent needs to stop listening for `storage` events (e.g.
+   * to be used in React's `useEffects`'s cleanup function).
    */
   init() {
     this.auth0.initStorageSyncing();
@@ -261,7 +264,7 @@ export class Othent
   }
 
   /**
-   *
+   * @returns `true` if Othent's Auth0 client has been initialized; `false` otherwise.
    */
   get isReady() {
     return this.auth0.isReady;
@@ -297,6 +300,13 @@ export class Othent
     }
   }
 
+  /**
+   * Add an event listener for the specific error type.
+   *
+   * @param type `"auth"` or `error`.
+   * @param listener Function of type `AuthListener` or `ErrorListener`.
+   * @returns A cleanup function that will remove the error listener when called.
+   */
   addEventListener<E extends OthentEventType>(
     type: E,
     listener: EventListenersByType[E],
@@ -324,6 +334,12 @@ export class Othent
     };
   }
 
+  /**
+   * Remove an error listener of the specified error type.
+   *
+   * @param type `"auth"` or `error`.
+   * @param listener Function of type `AuthListener` or `ErrorListener`.
+   */
   removeEventListener<E extends OthentEventType>(
     type: E,
     listener: EventListenersByType[E],
@@ -344,14 +360,29 @@ export class Othent
 
   // AUTH LOADING:
 
+  /**
+   * @returns `true` if the user is authenticated; `false` otherwise.
+   */
   get isAuthenticated() {
     return this.auth0.isAuthenticated;
   }
 
+  /**
+   * Automatically checks if the user is authenticated and, if they are not, it authenticates them automatically, either
+   * from an existing session or by prompting them to log in again.
+   *
+   * @returns `Promise<void>` you can await while the authentication / re-authentication process is happening.
+   */
   requireAuth() {
     return this.requireUserDataOrThrow().then(() => {});
   }
 
+  /**
+   * Automatically checks if the user is authenticated and, if they are not, it authenticates them automatically, either
+   * from an existing session or by prompting them to log in again.
+   *
+   * @returns `Promise<{ sub, publicKey }>` to get these 2 properties required in most Othent functions.
+   */
   private async requireUserDataOrThrow() {
     if (this.config.autoConnect !== "off" && !this.auth0.isAuthenticated) {
       await this.connect(undefined, undefined, this.gatewayConfig);
@@ -370,8 +401,10 @@ export class Othent
   // CONNECT / DISCONNECT:
 
   /**
-   * Connect the users account, this is the same as login/signup in one function.
-   * @returns The the users details.
+   * Prompts the user to sign in/up using Auth0's modal. This function cannot be called programmatically before the user
+   * interacts with the page (e.g. by clicking on a button), as that will result in a `Unable to open a popup` error.
+   *
+   * @returns A Promise with the `UserDetails` or `null` if the log in modal was closed or could not even be opened.
    */
   async connect(
     permissions?: PermissionType[],
@@ -392,6 +425,7 @@ export class Othent
     this.gatewayConfig = { ...gateway, ...DEFAULT_GATEWAY_CONFIG };
 
     // TODO: We can probably save a token generation on page first load using Auth0Client.checkSession() instead.
+    // TODO: If the user is already authenticated, this should be a NOOP.
 
     // Call `getTokenSilently()` to reconnect if we still have a valid token / session.
     //
@@ -770,6 +804,7 @@ export class Othent
    * Generate a signature. This function assumes (and requires) a user is logged in.
    * @param data The data to sign.
    * @returns The {@linkcode Buffer} format of the signature.
+   * @deprecated Use `sign`, `signDataItems` or `signMessage` instead.
    */
   async signature(data: string | BinaryDataType): Promise<Uint8Array> {
     const { sub } = await this.requireUserDataOrThrow();
@@ -887,6 +922,14 @@ export class Othent
     return result;
   }
 
+  /**
+   * Create a deterministic secret based on the input data.
+   *
+   * @param data Input data to generate the hash from.
+   * @param options Hash algorithm (default = `SHA-256`).
+   *
+   * @returns Hash `Uint8Array`.
+   */
   async privateHash(
     data: string | BinaryDataType,
     options?: SignMessageOptions,
@@ -899,10 +942,20 @@ export class Othent
 
   // MISC.:
 
-  getArweaveConfig() {
-    return Promise.resolve(this.gatewayConfig satisfies GatewayConfig);
+  /**
+   * Get the Arweave config used by Othent.
+   *
+   * @returns Promise of Othent's `GatewayConfig`.
+   */
+  getArweaveConfig(): Promise<GatewayConfig> {
+    return Promise.resolve(this.gatewayConfig);
   }
 
+  /**
+   * Get the permissions Othent can use in the current site.
+   *
+   * @returns Promise of Othent's `PermissionType[]`.
+   */
   getPermissions(): Promise<PermissionType[]> {
     return Promise.resolve([
       "ACCESS_ADDRESS",
