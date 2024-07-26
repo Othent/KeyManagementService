@@ -1,18 +1,26 @@
 # Othent KMS JS SDK
 
+Othent JS SDK to manage Arweave custodial wallets backend by Auth0 and Google Key Management Service.
+
+Try our demo at [kms-demo.othent.io](https://kms-demo.othent.io)!
+
+<br />
+
+[![Othent KMS JS SDK NPM page](https://img.shields.io/npm/v/%40othent%2Fkms?style=for-the-badge&color=%23CC3534)](https://www.npmjs.com/package/@othent/kms)
+
+<br />
+
+[![Othent KMS JS SDK NPM demo](https://kms-demo.othent.io/othent-kms-demo-screenshot.png)](https://kms-demo.othent.io)
+
+<br />
+
+## Installation & Setup
+
     npm install --save @othent/kms
     yarn install --save @othent/kms
     pnpm add --save @othent/kms
 
-<br />
-
-## Demo:
-
-Find an example test repo using Othent KMS JS SDK [here](https://github.com/Othent/KMS-test-repo).
-
-You can see this live on [kms-demo.othent.io](https://kms-demo.othent.io)
-
-<img src="https://kms-demo.othent.io/othent-kms-demo-screenshot.png" />
+Learn how to set it up at https://docs.othent.io or looking at our demo's code at https://github.com/Othent/KMS-test-repo.
 
 <br />
 
