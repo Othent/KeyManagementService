@@ -6,7 +6,6 @@
 
 <br />
 
-
 ## Demo:
 
 Find an example test repo using Othent KMS JS SDK [here](https://github.com/Othent/KMS-test-repo).
@@ -17,39 +16,38 @@ You can see this live on [kms-demo.othent.io](https://kms-demo.othent.io)
 
 <br />
 
-
 ## Publishing A New Release:
 
 ### Manually:
 
-1. Manually update the package version (`CLIENT_VERSION`) in `config.constants.ts`.
+1.  Manually update the package version (`CLIENT_VERSION`) in `config.constants.ts`.
 
-2. `pnpm build`.
+2.  `pnpm build`.
 
-3. Commit your changes.
+3.  Commit your changes.
 
-4. Use [`pnpm version`](https://docs.npmjs.com/cli/v7/commands/npm-version) to bump the version, which will also make sure
-the next commit has the right tags.
+4.  Use [`pnpm version`](https://docs.npmjs.com/cli/v7/commands/npm-version) to bump the version, which will also make sure
+    the next commit has the right tags.
 
-    **Stable release:**
+        **Stable release:**
 
-    ```
-    npm version patch
-    npm version minor
-    npm version major
-    ```
+        ```
+        npm version patch
+        npm version minor
+        npm version major
+        ```
 
 
-    **Pre-release:**
+        **Pre-release:**
 
-    ```
-    npm version prerelease --preid=beta
-    npm version prepatch --preid=beta
-    npm version preminor --preid=beta
-    npm version premajor --preid=beta
-    ```
+        ```
+        npm version prerelease --preid=beta
+        npm version prepatch --preid=beta
+        npm version preminor --preid=beta
+        npm version premajor --preid=beta
+        ```
 
-4. [`pnpm publish`](https://docs.npmjs.com/cli/v8/commands/npm-publish).
+5.  [`pnpm publish`](https://docs.npmjs.com/cli/v8/commands/npm-publish).
 
 <br />
 
@@ -73,6 +71,6 @@ If you accidentally updated the `latest` tag, you can point it to another versio
 
 - [x] Add `.npmrc`.
 - [x] Add build / publish scripts.
-- [ ] Huskey to format on commit and custom pre-commit to update/check version.
+- [x] Add `husky` and `lit-staged` to format on commit and custom pre-commit to update/check version.
 - [ ] Custom error.
 - [ ] Fix signDataItem signature verification.
