@@ -72,7 +72,7 @@ If you accidentally updated the `latest` tag, you can point it to another versio
 **Stable Release:**
 
 - [x] Add `.npmrc`.
-- [ ] Add build / publish scripts.
-- [ ] Huskey to format on commit and custom pre-commit to update version.
+- [x] Add build / publish scripts.
+- [ ] Huskey to format on commit and custom pre-commit to update/check version.
 - [ ] Custom error.
 - [ ] Fix signDataItem signature verification.

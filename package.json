@@ -22,10 +22,15 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun run prettier && tsup src/index.ts --format cjs,esm --dts",
-    "dev": "bun run build && bun link && tsup src/index.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "bun link && tsup src/index.ts --format cjs,esm --dts --watch",
+    "clean": "rm -rf dist",
+    "nuke": "clean && rm -rf node_modules pnpm-lock.yaml bun.lockb",
     "test": "bun test",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write .",
+    "preversion": "pnpm test",
+    "version": "pnpm run build && git add .",
+    "postversion": "git push && git push --tags && pnpm clean"
   },
   "repository": {
     "type": "git",
