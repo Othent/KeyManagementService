@@ -59,7 +59,7 @@ Learn how to set it up at https://docs.othent.io or looking at our demo's code a
 
     If you are publishing a pre-release version and don't want the `latest` tag to be updated, run this instead:
 
-        pnpm publish --tag $(node -p -e "require('./package.json').version")
+        pnpm publish --tag beta
 
 <br />
 
