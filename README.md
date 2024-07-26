@@ -63,6 +63,14 @@ You can see the package distribution (not version) tags like this:
 
     npm view . dist-tags
 
+If you added / pushed an incorrect tag, you can delete it from the server with:
+
+    git push origin :refs/tags/v0.1.0
+
+And locally with:
+
+    git tag -d v0.1.0
+
 ## This branch / PR:
 
 **Beta Release:**
