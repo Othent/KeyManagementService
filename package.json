@@ -30,7 +30,7 @@
     "prettier": "prettier --write .",
     "preversion": "pnpm test",
     "version": "pnpm run build && bash .husky/pre-commit && git add .",
-    "postversion": "git push && git push --tags && pnpm clean",
+    "postversion": "git push && git push --tags",
     "prepare": "husky"
   },
   "repository": {
