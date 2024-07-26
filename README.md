@@ -70,21 +70,3 @@ If you added / pushed an incorrect tag, you can delete it from the server with:
 And locally with:
 
     git tag -d v0.1.0
-
-## This branch / PR:
-
-**Beta Release:**
-
-- [x] Playground inline inputs / log.
-- [x] Playground settings form.
-- [x] Test with data from old arweave: - encrypt (old) => decrypt (new) works fine. - signMessage (old) => verifyMessage (new) works fine.
-- [x] Complete TSDocs using the Notion docs for now.
-- [x] Manually release and document the process in the README.
-
-**Stable Release:**
-
-- [x] Add `.npmrc`.
-- [x] Add build / publish scripts.
-- [x] Add `husky` and `lit-staged` to format on commit and custom pre-commit to update/check version.
-- [ ] Custom error.
-- [ ] Fix signDataItem signature verification.
