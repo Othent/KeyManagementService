@@ -20,13 +20,7 @@ You can see this live on [kms-demo.othent.io](https://kms-demo.othent.io)
 
 ### Manually:
 
-1.  Manually update the package version (`CLIENT_VERSION`) in `config.constants.ts`.
-
-2.  `pnpm build`.
-
-3.  Commit your changes.
-
-4.  Use [`pnpm version`](https://docs.npmjs.com/cli/v7/commands/npm-version) to bump the version, which will also make sure
+1.  Use [`pnpm version`](https://docs.npmjs.com/cli/v7/commands/npm-version) to bump the version, which will also make sure
     the next commit has the right tags.
 
         **Stable release:**
@@ -47,7 +41,15 @@ You can see this live on [kms-demo.othent.io](https://kms-demo.othent.io)
         npm version premajor --preid=beta
         ```
 
-5.  [`pnpm publish`](https://docs.npmjs.com/cli/v8/commands/npm-publish).
+    The `preversion`, `version` and `postversion` scripts defined in `package.json` will test, format, build, tag and push all the changes automatically.
+
+2.  To publish a stable release, simply run [`pnpm publish`](https://docs.npmjs.com/cli/v8/commands/npm-publish).
+
+    The `latest` tag will also point to this new version.
+
+    If you are publishing a pre-release version and don't want the `latest` tag to be updated, run this instead:
+
+        pnpm publish --tag $(node -p -e "require('./package.json').version")
 
 <br />
 
@@ -56,6 +58,10 @@ You can see this live on [kms-demo.othent.io](https://kms-demo.othent.io)
 If you accidentally updated the `latest` tag, you can point it to another version with the following command:
 
     npm dist-tag add @othent/kms@<version> latest
+
+You can see the package distribution (not version) tags like this:
+
+    npm view . dist-tags
 
 ## This branch / PR:
 
