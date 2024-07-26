@@ -25,7 +25,7 @@
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "bun link && tsup src/index.ts --format cjs,esm --dts --watch",
     "clean": "rm -rf dist",
-    "nuke": "clean && rm -rf node_modules pnpm-lock.yaml bun.lockb",
+    "nuke": "pnpm clean && rm -rf node_modules pnpm-lock.yaml bun.lockb",
     "test": "bun test",
     "prettier": "prettier --write .",
     "preversion": "pnpm test",
@@ -75,10 +75,6 @@
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
-  },
-  "engines": {
-    "pnpm": ">=9.0.0",
-    "node": ">=20.0.0 <22.0.0"
   },
   "lint-staged": {
     "*": [

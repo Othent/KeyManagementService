@@ -14,13 +14,15 @@ Try our demo at [kms-demo.othent.io](https://kms-demo.othent.io)!
 
 <br />
 
-## Installation & Setup
+Learn how to set it up at https://docs.othent.io or looking at our demo's code at https://github.com/Othent/KMS-test-repo.
+
+<br />
+
+## Installation
 
     npm install --save @othent/kms
     yarn install --save @othent/kms
     pnpm add --save @othent/kms
-
-Learn how to set it up at https://docs.othent.io or looking at our demo's code at https://github.com/Othent/KMS-test-repo.
 
 <br />
 
