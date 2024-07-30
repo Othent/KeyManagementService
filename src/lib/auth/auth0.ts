@@ -83,6 +83,7 @@ export class OthentAuth0Client {
       emailVerified: !!idToken.email_verified,
       owner: idToken.owner,
       walletAddress: idToken.walletAddress,
+      // TODO: Add the walletName here and resolve https://ans.gg
       authSystem: idToken.authSystem,
     };
   }

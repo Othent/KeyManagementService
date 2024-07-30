@@ -37,7 +37,6 @@ import type Transaction from "arweave/web/lib/transaction";
 import type { Tag } from "arweave/web/lib/transaction";
 import type Arweave from "arweave/web";
 import type { ApiConfig } from "arweave/web/lib/api";
-import ArweaveModule from "arweave";
 import {
   ArDriveBundledTransactionData,
   ArDriveBundledTransactionResponseData,
@@ -51,10 +50,18 @@ import {
 } from "./othent.types";
 import { AppInfo, OthentConfig, OthentOptions } from "../config/config.types";
 
-// TODO: Fix this properly:
-const ArweaveClass = (ArweaveModule as unknown as any).default as Arweave & {
-  init: (apiConfig: ApiConfig) => Arweave;
-};
+async function initArweave(apiConfig: ApiConfig) {
+  return import("arweave").then((ArweaveModule) => {
+    // TODO: Fix this import issue properly:
+    const ArweaveClass = (
+      ArweaveModule as unknown as { default: { default: typeof Arweave } }
+    ).default.default;
+
+    console.log("ArweaveClass =", ArweaveClass);
+
+    return ArweaveClass.init(apiConfig);
+  });
+}
 
 export class Othent
   implements Omit<ArConnect, "connect" | "addToken" | "isTokenAdded">
@@ -90,6 +97,8 @@ export class Othent
   // TODO: Add B64 / B64Encoded support (e.g. option on encrypt to return B64Encoded, make decrypt accept a B64 input, make all signature functions return B64Encoded results...)
 
   // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
+
+  // TODO: Expose Auth0 client and/or accessToken for developers to use on their own backend?
 
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     let {
@@ -179,6 +188,13 @@ export class Othent
       this.connect();
     }
 
+    // TODO: Remove this once tested in React Native:
+    (window as any).initArweave = () => {
+      return initArweave(this.gatewayConfig).then((arweave) =>
+        console.log("DONE =", arweave),
+      );
+    };
+
     if (!config.throwErrors) {
       const walletMethods = [
         "connect",
@@ -237,6 +253,7 @@ export class Othent
 
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
 
+    // TODO: Pass this as an option to enable debugging?
     if (process.env.NODE_ENV === "development") {
       console.group(`${this.walletName} @ ${this.walletVersion}`);
 
@@ -368,18 +385,24 @@ export class Othent
   }
 
   /**
-   * Automatically checks if the user is authenticated and, if they are not, it authenticates them automatically, either
-   * from an existing session or by prompting them to log in again.
+   * Automatically checks if the user is authenticated. If they are not, and...
    *
-   * @returns `Promise<void>` you can await while the authentication / re-authentication process is happening.
+   * - `autoConnect === "eager"`: Prompts them to sign in/up again. It throws an error if authentication fails.
+   * - `autoConnect === "lazy"`: Authenticates them automatically, either from an existing session or by prompting them
+   *   to sign in/up again. It throws an error if authentication fails.
+   * - `autoConnect === "off"`: It throws an error.
    */
   requireAuth() {
     return this.requireUserDataOrThrow().then(() => {});
   }
 
   /**
-   * Automatically checks if the user is authenticated and, if they are not, it authenticates them automatically, either
-   * from an existing session or by prompting them to log in again.
+   * Automatically checks if the user is authenticated. If they are not, and...
+   *
+   * - `autoConnect === "eager"`: Prompts them to sign in/up again. It throws an error if authentication fails.
+   * - `autoConnect === "lazy"`: Authenticates them automatically, either from an existing session or by prompting them
+   *   to sign in/up again. It throws an error if authentication fails.
+   * - `autoConnect === "off"`: It throws an error.
    *
    * @returns `Promise<{ sub, publicKey }>` to get these 2 properties required in most Othent functions.
    */
@@ -404,7 +427,8 @@ export class Othent
    * Prompts the user to sign in/up using Auth0's modal. This function cannot be called programmatically before the user
    * interacts with the page (e.g. by clicking on a button), as that will result in a `Unable to open a popup` error.
    *
-   * @returns A Promise with the `UserDetails` or `null` if the log in modal was closed or could not even be opened.
+   * @returns A Promise with the `UserDetails` or `null` if the log in modal was closed, could not even be opened or
+   * authentication failed.
    */
   async connect(
     permissions?: PermissionType[],
@@ -412,6 +436,7 @@ export class Othent
     gateway?: GatewayConfig,
   ): Promise<UserDetails | null> {
     if (permissions) {
+      // TODO: Throw error instead, at least if they do not match.
       console.warn(
         "Permissions param is ignored. Othent will have access to everything.",
       );
@@ -522,8 +547,7 @@ export class Othent
   }
 
   /**
-   * Disconnect the users wallet. This will require the user to log back in after called.
-   * @returns Nothing.
+   * Logs out the user (disconnect the user's wallet). This will require the user to log back in after called.
    */
   async disconnect() {
     return this.auth0.logOut();
@@ -532,7 +556,12 @@ export class Othent
   // GET DATA (ASYNC):
 
   /**
-   * Get the active wallet address of the users wallet, wrapped in a Promise. This function assumes (and requires) a user is logged in.
+   * Returns the Arweave wallet address associated with the active (authenticated) user account.
+   *
+   * The wallet address is derived from the corresponding public key (see [`getActivePublicKey()`](get-active-public-key.md)).
+   *
+   * This function assumes (and requires) a user is authenticated.
+   *
    * @returns A Promise with the active wallet address of the users wallet.
    */
   getActiveAddress() {
@@ -540,32 +569,54 @@ export class Othent
   }
 
   /**
-   * Get the owner (jwk.n) field of the users wallet, wrapped in a Promise. This function assumes (and requires) a user is logged in.
-   * @returns A Promise with the owner (jwk.n) field of the users wallet.
+   * Returns the public key (`jwk.n` field) associated with the active (authenticated) user account.
+   *
+   * This function assumes (and requires) a user is authenticated.
+   *
+   * @returns A Promise with the owner (jwk.n field) of the users wallet.
    */
   getActivePublicKey() {
     return Promise.resolve(this.getSyncActivePublicKey());
   }
 
   /**
-   * Get all addresses of the users wallet, wrapped in a Promise. This function assumes (and requires) a user is logged in.
-   * @returns A Promise with all wallet addresses of the users wallet.
+   * Returns an array of Arweave wallet addresses associated with the active (authenticated) user account.
+   *
+   * However, note that Othent does not currently support creating/storing more than one wallet associated to the same
+   * account, so this function will always return exactly one wallet address.
+   *
+   * This function assumes (and requires) a user is authenticated.
+   *
+   * @returns A Promise with an array of all wallet addresses of the users wallet.
    */
   getAllAddresses() {
     return Promise.resolve(this.getSyncAllAddresses());
   }
 
   /**
-   * Get the wallets (users) email, wrapped in a Promise. This function assumes (and requires) a user is logged in.
-   * @returns A Promise with the wallets (users) email.
+   * Similarly to ArConnect, each wallet in Othent has a nickname. This is either:
+   *
+   * - The user's [ANS](https://ans.gg) name.
+   * - A platform + email identifying label (e.g. `Google (email@gmail.com)`, `Twitter (email@outlook.com)`...).
+   *
+   * To provide better UX, you can retrieve these names and display them to the user, so that they can easily recognize
+   * which wallet they're using.
+   *
+   * However, note that Othent does not currently support creating/storing more than one wallet associated to the same
+   * account, so this function will always return exactly one wallet address.
+   *
+   * This function assumes (and requires) a user is authenticated.
+   *
+   * @returns A Promise containing an object that maps each wallet addresses to their nickname.
    */
   getWalletNames() {
     return Promise.resolve(this.getSyncWalletNames());
   }
 
   /**
-   * Get user details, wrapped in a Promise. This function assumes (and requires) a user is logged in.
-   * @returns A Promise with the user's details.
+   * Returns an object with all the user details of the active (authenticated) user account.
+   *
+   * @returns A Promise containing all the user details of the active user, or `null` if the user is not authenticated.
    */
   getUserDetails() {
     return Promise.resolve(this.getSyncUserDetails());
@@ -574,23 +625,23 @@ export class Othent
   // GET DATA (SYNC):
 
   /**
-   * Get the active wallet address of the users wallet. This function assumes (and requires) a user is logged in.
+   * Get the active wallet address of the users wallet. This function assumes (and requires) a user is authenticated.
    * @returns The active wallet address of the users wallet.
    */
   getSyncActiveAddress() {
-    return this.auth0.getCachedUserAddress() || "";
+    return this.auth0.getCachedUserAddress() || ("" as const);
   }
 
   /**
-   * Get the owner (jwk.n) field of the users wallet. This function assumes (and requires) a user is logged in.
+   * Get the owner (jwk.n) field of the users wallet. This function assumes (and requires) a user is authenticated.
    * @returns The owner (jwk.n) field of the users wallet.
    */
   getSyncActivePublicKey() {
-    return this.auth0.getCachedUserPublicKey() || "";
+    return this.auth0.getCachedUserPublicKey() || ("" as const);
   }
 
   /**
-   * Get all addresses of the users wallet. This function assumes (and requires) a user is logged in.
+   * Get all addresses of the users wallet. This function assumes (and requires) a user is authenticated.
    * @returns All wallet addresses of the users wallet.
    */
   getSyncAllAddresses() {
@@ -600,10 +651,10 @@ export class Othent
   }
 
   /**
-   * Get the wallets (users) email. This function assumes (and requires) a user is logged in.
+   * Get the wallets (users) email. This function assumes (and requires) a user is authenticated.
    * @returns The wallets (users) email.
    */
-  getSyncWalletNames() {
+  getSyncWalletNames(): Promise<Record<B64UrlString, string>> {
     const address = this.auth0.getCachedUserAddress();
 
     // TODO: This should instead say something like `Google (email@gmail.com)` or `Twitter (email@outlook.com)`...
@@ -619,7 +670,7 @@ export class Othent
   }
 
   /**
-   * Get user details. This function assumes (and requires) a user is logged in.
+   * Get user details. This function assumes (and requires) a user is authenticated.
    * @returns The user's details.
    */
   getSyncUserDetails() {
@@ -658,9 +709,19 @@ export class Othent
   }
 
   /**
-   * Sign the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
+   * To submit a transaction to the Arweave Network, it first has to be signed using a private key. Othent creates a private
+   * key / Arweave wallet for every account and stores it in Google KMS. The wallet associated with the active user account
+   * is used to sign transactions using the `sign()` function.
+   *
+   * The `sign()` function is meant to replicate the behavior of the `transactions.sign()` function of
+   * [`arweave-js`](https://github.com/arweaveTeam/arweave-js#sign-a-transaction), but instead of mutating the transaction
+   * object, it returns a new and signed transaction instance.
+   *
+   * This function assumes (and requires) a user is authenticated and a valid arweave transaction.
+   *
    * @param transaction The transaction to sign.
-   * @returns The signed version of the transaction.
+   *
+   * @returns A Promise containing the signed transaction.
    */
   async sign(transaction: Transaction): Promise<Transaction> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
@@ -680,17 +741,31 @@ export class Othent
       id: uint8ArrayTob64Url(id),
       owner: publicKey,
       signature: uint8ArrayTob64Url(signatureBuffer),
+      // TODO: THis was in ArConnect's docs:
+      // reward: signedFields.reward,
+      // tags: signedFields.tags,
     });
 
+    // TODO: This transaction should be of type https://github.com/arweaveTeam/arweave-js#transactions
     return transaction;
   }
 
   /**
-   * dispatch the given transaction. This function assumes (and requires) a user is logged in and a valid arweave transaction.
-   * @param transaction The transaction to sign.
+   * The `dispatch()` function allows you to quickly sign and send a transaction to the network in a bundled format. It is
+   * best for smaller datas and contract interactions. If the bundled transaction cannot be submitted, it will fall back to a
+   * base layer transaction. The function returns the [result](dispatch.md#dispatch-result) of the API call.
+   *
+   * This function assumes (and requires) a user is authenticated and a valid arweave transaction.
+   *
+   * @param transaction The transaction to sign and dispatch.
+   *
    * @returns The signed version of the transaction.
    */
-  async dispatch(transaction: Transaction, options?: DispatchOptions) {
+  async dispatch(
+    // TODO: Accept a dataItem straight out of signDataItem()?
+    transaction: Transaction,
+    options?: DispatchOptions,
+  ): Promise<ArDriveBundledTransactionData | UploadedTransactionData> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
 
     const signer: Signer = {
@@ -751,7 +826,8 @@ export class Othent
 
       await this.sign(transaction);
 
-      const arweave = options?.arweave ?? ArweaveClass.init(this.gatewayConfig);
+      const arweave =
+        options?.arweave ?? (await initArweave(this.gatewayConfig));
 
       const uploader = await arweave.transactions.getUploader(transaction);
 
@@ -771,8 +847,12 @@ export class Othent
   // ENCRYPT/DECRYPT:
 
   /**
-   * Encrypt data with the users JWK. This function assumes (and requires) a user is logged in and a valid string to sign.
+   * Encrypt data with the users JWK.
+   *
+   * This function assumes (and requires) a user is authenticate.
+   *
    * @param plaintext The data in string format to sign.
+   *
    * @returns The encrypted data.
    */
   async encrypt(plaintext: string | BinaryDataType): Promise<Uint8Array> {
@@ -784,8 +864,12 @@ export class Othent
   }
 
   /**
-   * Decrypt data with the users JWK. This function assumes (and requires) a user is logged in and a valid encrypt() response.
+   * Decrypt data with the users JWK.
+   *
+   * This function assumes (and requires) a user is authenticated.
+   *
    * @param ciphertext The data to decrypt.
+   *
    * @returns The decrypted data.
    */
   async decrypt(ciphertext: BinaryDataType): Promise<string> {
@@ -793,6 +877,7 @@ export class Othent
 
     const plaintext = await this.api.decrypt(ciphertext, sub);
 
+    // TODO: The return type should probably be binary as well:
     return plaintext;
   }
 
@@ -801,7 +886,7 @@ export class Othent
   // TODO: Add deprecation warning (and update all TSDocs according to what's on ArConnect and add references to their docs).
 
   /**
-   * Generate a signature. This function assumes (and requires) a user is logged in.
+   * Generate a signature. This function assumes (and requires) a user is authenticated.
    * @param data The data to sign.
    * @returns The {@linkcode Buffer} format of the signature.
    * @deprecated Use `sign`, `signDataItems` or `signMessage` instead.
@@ -848,7 +933,7 @@ export class Othent
   }
 
   /**
-   * Sign the given message. This function assumes (and requires) a user is logged in.
+   * Sign the given message. This function assumes (and requires) a user is authenticated.
    * @param message The message to sign.
    * @returns The signed version of the message.
    */
@@ -871,7 +956,7 @@ export class Othent
   }
 
   /**
-   * Verify the given message. This function assumes (and requires) a user is logged in.
+   * Verify the given message. This function assumes (and requires) a user is authenticated.
    * @param signature The signature to verify.
    * @returns The signed version of the message.
    */

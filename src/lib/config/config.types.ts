@@ -101,6 +101,8 @@ export interface OthentConfig {
    * @defaultValue `[]`
    */
   tags: TagData[];
+
+  // TODO: Add gateway config here too
 }
 
 export interface OthentOptions
