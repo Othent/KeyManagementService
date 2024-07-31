@@ -49,6 +49,7 @@ import {
   UploadedTransactionData,
 } from "./othent.types";
 import { AppInfo, OthentConfig, OthentOptions } from "../config/config.types";
+import { mergeOptions } from "../utils/options/options.utils";
 
 async function initArweave(apiConfig: ApiConfig) {
   return import("arweave").then((ArweaveModule) => {
@@ -90,7 +91,7 @@ export class Othent
     version: "",
   };
 
-  gatewayConfig = DEFAULT_GATEWAY_CONFIG;
+  gatewayConfig: GatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
   // TODO: Add B64 / B64Encoded support (e.g. option on encrypt to return B64Encoded, make decrypt accept a B64 input, make all signature functions return B64Encoded results...)
 
@@ -110,8 +111,7 @@ export class Othent
     } = options;
 
     this.config = {
-      ...DEFAULT_OTHENT_CONFIG,
-      ...configOptions,
+      ...mergeOptions<OthentConfig>(configOptions, DEFAULT_OTHENT_CONFIG),
       cookieKey:
         typeof persistCookie === "string"
           ? persistCookie
@@ -424,7 +424,7 @@ export class Othent
       this.auth0.setAppInfo(appInfo);
     }
 
-    this.gatewayConfig = { ...gateway, ...DEFAULT_GATEWAY_CONFIG };
+    this.gatewayConfig = gateway || DEFAULT_GATEWAY_CONFIG;
 
     // TODO: We can probably save a token generation on page first load using Auth0Client.checkSession() instead.
     // TODO: If the user is already authenticated, this should be a NOOP.

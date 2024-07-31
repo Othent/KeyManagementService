@@ -1,3 +1,5 @@
+import { mergeOptions } from "../options/options.utils";
+
 export interface CookieOptions {
   secure: boolean;
   domain: boolean | string;
@@ -10,11 +12,11 @@ export interface CookieParams {
   ttlMs: number;
 }
 
-export const DEFAULT_COOKIE_OPTIONS: CookieOptions = {
+export const DEFAULT_COOKIE_OPTIONS = {
   secure: true,
   domain: true,
   ttlHours: 360,
-};
+} as const satisfies CookieOptions;
 
 export type CookieStr =
   | `${string}=${string};`
@@ -32,15 +34,9 @@ export class CookieStorage implements Storage {
   private ttlMs = 1296000000; // 2 weeks
 
   constructor(cookieOptions: Partial<CookieOptions> = DEFAULT_COOKIE_OPTIONS) {
-    const {
-      secureParam,
-      domainParam,
-      ttlMs,
-      // TODO: Implement optionsMerge as this doesn't work {...{a:2}, ...{a:undefined}}
-    } = this.parseCookieOptions({
-      ...DEFAULT_COOKIE_OPTIONS,
-      ...cookieOptions,
-    });
+    const { secureParam, domainParam, ttlMs } = this.parseCookieOptions(
+      mergeOptions(cookieOptions, DEFAULT_COOKIE_OPTIONS),
+    );
 
     this.secureParam = secureParam;
     this.domainParam = domainParam;
