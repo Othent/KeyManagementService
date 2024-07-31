@@ -51,9 +51,34 @@ export interface IdTokenWithData<D = void> extends JwtPayload, User {
 
 // User details:
 
+export type Auth0SubPrefix =
+  | `apple`
+  | `auth0`
+  | `google-oauth2`
+  | `<LinkedIn>`
+  | `<X>`
+  | `<Meta>`
+  | `<Twitch>`
+  | `github`;
+
+export type OthentSub = `${Auth0SubPrefix}|(${string})`;
+
+export type Auth0ProviderLabel =
+  | `Apple`
+  | `E-Mail`
+  | `Google`
+  | `LinkedIn`
+  | `X`
+  | `Meta`
+  | `Twitch`
+  | `GitHub`
+  | `Unknown Provider`;
+
+export type OthentWalletAddressName = `${Auth0ProviderLabel} (${string})`;
+
 export interface UserDetails {
   // Default from Auth0's User:
-  sub: string;
+  sub: OthentSub;
   name: string;
   givenName: string;
   middleName: string;
@@ -79,6 +104,7 @@ export interface UserDetails {
   // Custom from Auth0's Add User Metadata action:
   owner: B64UrlString; // Public key derived from `sub`.
   walletAddress: B64UrlString; // Wallet address derived from `owner`.
+  walletAddressName: OthentWalletAddressName;
   authSystem: "KMS";
 }
 

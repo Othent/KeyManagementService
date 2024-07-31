@@ -28,7 +28,7 @@ export * from "./lib/config/config.types";
 // Auth0:
 // Almost everything here is internal.
 
-export { UserDetails } from "./lib/auth/auth0.types";
+export { OthentWalletAddressName, UserDetails } from "./lib/auth/auth0.types";
 
 // API:
 // Export for backwards compatibility / easier migration.

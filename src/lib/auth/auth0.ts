@@ -12,6 +12,10 @@ import {
   TransactionInput,
   OthentAuth0ClientOptions,
   StoredUserDetails,
+  OthentWalletAddressName,
+  OthentSub,
+  Auth0SubPrefix,
+  Auth0ProviderLabel,
 } from "./auth0.types";
 import {
   CLIENT_NAME,
@@ -24,6 +28,17 @@ import { AppInfo, OthentStorageKey } from "../config/config.types";
 import { cookieStorage } from "../utils/cookies/cookie-storage";
 
 export class OthentAuth0Client {
+  static PROVIDER_LABELS: Record<Auth0SubPrefix, Auth0ProviderLabel> = {
+    apple: "Apple",
+    auth0: "E-Mail",
+    "google-oauth2": "Google",
+    "<LinkedIn>": "LinkedIn",
+    "<X>": "X",
+    "<Meta>": "Meta",
+    "<Twitch>": "Twitch",
+    github: "GitHub",
+  };
+
   private auth0ClientPromise: Promise<Auth0Client | null> =
     Promise.resolve(null);
 
@@ -66,8 +81,18 @@ export class OthentAuth0Client {
   }
 
   static getUserDetails<D>(idToken: IdTokenWithData<D>): UserDetails {
+    const sub = (idToken.sub || "") as OthentSub;
+    const email = idToken.email || "";
+    const subPrefix = sub.split("|")[0] as Auth0SubPrefix;
+    const providerLabel =
+      OthentAuth0Client.PROVIDER_LABELS[subPrefix] || "Unknown Provider";
+    const walletAddressName: OthentWalletAddressName = `${providerLabel} (${email})`;
+
+    // TODO: Reverse-resolve walletName to https://ans.gg too...
+    // https://arweave.bio/profile/<ADDRESS> (not working)
+
     return {
-      sub: idToken.sub || "",
+      sub,
       name: idToken.name || "",
       givenName: idToken.given_name || "",
       middleName: idToken.middle_name || "",
@@ -79,11 +104,11 @@ export class OthentAuth0Client {
       website: idToken.website || "",
       locale: idToken.locale || "",
       updatedAt: idToken.updated_at || "",
-      email: idToken.email || "",
+      email,
       emailVerified: !!idToken.email_verified,
       owner: idToken.owner,
       walletAddress: idToken.walletAddress,
-      // TODO: Add the walletName here and resolve https://ans.gg
+      walletAddressName,
       authSystem: idToken.authSystem,
     };
   }
@@ -462,6 +487,10 @@ export class OthentAuth0Client {
 
   getCachedUserAddress() {
     return this.userDetails?.walletAddress || null;
+  }
+
+  getCachedUserAddressName() {
+    return this.userDetails?.walletAddressName || null;
   }
 
   getCachedUserEmail() {

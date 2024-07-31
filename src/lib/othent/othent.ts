@@ -633,9 +633,7 @@ export class Othent
    */
   getSyncWalletNames(): Promise<Record<B64UrlString, string>> {
     const address = this.auth0.getCachedUserAddress();
-
-    // TODO: This should instead say something like `Google (email@gmail.com)` or `Twitter (email@outlook.com)`...
-    const addressName = this.auth0.getCachedUserEmail();
+    const addressName = this.auth0.getCachedUserAddressName();
 
     return Promise.resolve(
       address && addressName
@@ -718,7 +716,7 @@ export class Othent
       id: uint8ArrayTob64Url(id),
       owner: publicKey,
       signature: uint8ArrayTob64Url(signatureBuffer),
-      // TODO: THis was in ArConnect's docs:
+      // TODO: This was in ArConnect's docs:
       // reward: signedFields.reward,
       // tags: signedFields.tags,
     });
