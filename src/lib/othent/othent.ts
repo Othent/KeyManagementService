@@ -79,8 +79,6 @@ export class Othent
   private errorEventListenerHandler =
     new EventListenersHandler<ErrorListener>();
 
-  private devAlertTimeoutID = 0;
-
   walletName = CLIENT_NAME;
 
   walletVersion = CLIENT_VERSION;
@@ -252,17 +250,6 @@ export class Othent
     }
 
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
-
-    // TODO: Pass this as an option to enable debugging?
-    if (process.env.NODE_ENV === "development") {
-      console.group(`${this.walletName} @ ${this.walletVersion}`);
-
-      Object.entries(config).map(([key, value]) => {
-        console.log(` ${key.padStart(13)} = ${value}`);
-      });
-
-      console.groupEnd();
-    }
   }
 
   /**
@@ -304,16 +291,6 @@ export class Othent
         error,
         '\nWhen using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`',
       );
-
-      if (process.env.NODE_ENV === "development") {
-        window.clearTimeout(this.devAlertTimeoutID);
-
-        this.devAlertTimeoutID = window.setTimeout(() => {
-          alert(
-            'When using `throwErrors = false`, you must add at least one error event listener with `othent.addEventListener("error", () => { ... })`',
-          );
-        }, 1000);
-      }
     }
   }
 

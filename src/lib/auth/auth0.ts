@@ -427,12 +427,6 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    if (process.env.NODE_ENV !== "production") {
-      alert(
-        " The page will reload after closing this Alert. Preserve your logs if needed.",
-      );
-    }
-
     return auth0Client
       .logout({
         logoutParams: {
@@ -441,12 +435,6 @@ export class OthentAuth0Client {
       })
       .catch((err) => {
         console.warn(err instanceof Error ? err.message : err);
-
-        if (process.env.NODE_ENV !== "production") {
-          alert(
-            `Auth0Client.logout() has throw an error:\n\n${err instanceof Error ? err.message : err}. The page will reload after closing this Alert.`,
-          );
-        }
 
         window.location.reload();
       });
