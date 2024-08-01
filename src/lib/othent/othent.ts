@@ -52,13 +52,11 @@ import { AppInfo, OthentConfig, OthentOptions } from "../config/config.types";
 import { mergeOptions } from "../utils/options/options.utils";
 
 async function initArweave(apiConfig: ApiConfig) {
-  return import("arweave").then((ArweaveModule) => {
+  return import("arweave/web").then((ArweaveModule) => {
     // TODO: Fix this import issue properly:
     const ArweaveClass = (
       ArweaveModule as unknown as { default: { default: typeof Arweave } }
     ).default.default;
-
-    console.log("ArweaveClass =", ArweaveClass);
 
     return ArweaveClass.init(apiConfig);
   });
@@ -70,6 +68,18 @@ export class Othent
   static walletName = CLIENT_NAME;
 
   static walletVersion = CLIENT_VERSION;
+
+  static ALL_PERMISSIONS = [
+    "ACCESS_ADDRESS",
+    "ACCESS_ALL_ADDRESSES",
+    "ACCESS_ARWEAVE_CONFIG",
+    "ACCESS_PUBLIC_KEY",
+    "DECRYPT",
+    "DISPATCH",
+    "ENCRYPT",
+    "SIGN_TRANSACTION",
+    "SIGNATURE",
+  ] as const satisfies PermissionType[];
 
   private crypto: Crypto;
 
@@ -412,10 +422,12 @@ export class Othent
     appInfo?: AppInfo,
     gateway?: GatewayConfig,
   ): Promise<UserDetails | null> {
-    if (permissions) {
-      // TODO: Throw error instead, at least if they do not match.
-      console.warn(
-        "Permissions param is ignored. Othent will have access to everything.",
+    if (
+      permissions &&
+      permissions.toSorted().join("-") !== Othent.ALL_PERMISSIONS.join("-")
+    ) {
+      throw new Error(
+        "Othent implicitly has access to all available permissions. You should pass `permissions = undefined` or include all of them.",
       );
     }
 
@@ -701,18 +713,38 @@ export class Othent
   async sign(transaction: Transaction): Promise<Transaction> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
 
-    // TODO: We should probably create a new transaction instead of updating the one passed as param:
-    transaction.setOwner(publicKey);
+    let newTransaction: Transaction = transaction;
 
-    this.addCommonTags(transaction);
+    try {
+      // TODO: This should not be using a try-catch that might, in some cases, fallback to mutating the `transaction`
+      // param, but `arweave` / `initArweave` will throw an error in React Native:
 
-    const dataToSign = await transaction.getSignatureData();
+      const arweave = await initArweave(this.gatewayConfig);
+
+      newTransaction = await arweave.createTransaction({
+        data: transaction.data,
+        tags: transaction.get("tags") as unknown as Tag[],
+        // owner: publicKey,
+      });
+
+      // const dataToSign1 = await transaction.getSignatureData();
+      // const dataToSign2 = await newTransaction.getSignatureData();
+      // console.log("ARE THEY EQUAL?", dataToSign1, dataToSign2);
+    } catch (err) {
+      console.warn(`Error cloning the Transaction object =\n`, err);
+    }
+
+    newTransaction.setOwner(publicKey);
+
+    this.addCommonTags(newTransaction);
+
+    const dataToSign = await newTransaction.getSignatureData();
 
     const signatureBuffer = await this.api.sign(dataToSign, sub);
 
     let id = await hash(signatureBuffer);
 
-    transaction.setSignature({
+    newTransaction.setSignature({
       id: uint8ArrayTob64Url(id),
       owner: publicKey,
       signature: uint8ArrayTob64Url(signatureBuffer),
@@ -721,8 +753,7 @@ export class Othent
       // tags: signedFields.tags,
     });
 
-    // TODO: This transaction should be of type https://github.com/arweaveTeam/arweave-js#transactions
-    return transaction;
+    return newTransaction;
   }
 
   /**
@@ -753,6 +784,7 @@ export class Othent
       // verify: null,
     };
 
+    // TODO: Do not mutate the original transaction:
     this.addCommonTags(transaction);
 
     // Using transaction.tags won't work as those wound still be encoded:
@@ -884,14 +916,17 @@ export class Othent
 
     const { data, tags, ...options } = dataItem;
 
+    // console.log("publicKey =", publicKey.length, publicKey)
+
     const signer: Signer = {
       publicKey: toBuffer(publicKey),
+      // publicKey: Buffer.from(publicKey, "base64"),
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
       sign: this.api.getSignerSignFn(sub),
       // Note we don't provide `verify` as it's not used anyway:
-      // verify: () => true,
+      // verify: null,
     };
 
     const opts: DataItemCreateOptions = {
@@ -901,8 +936,31 @@ export class Othent
 
     const dataItemInstance = createData(data, signer, opts);
 
+    // console.log(
+    //   "OLD SIGNATURE =",
+    //   dataItemInstance.rawSignature,
+    // );
+
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
-    await dataItemInstance.sign(signer);
+    const rawIdBuffer = await dataItemInstance.sign(signer);
+    // console.log(rawIdBuffer);
+
+    // await dataItemInstance.setSignature(rawIdBuffer);
+
+    // console.log(
+    //   "NEW SIGNATURE =",
+    //   dataItemInstance.rawSignature,
+    // );
+
+    // console.log(
+    //   "OWNER =",
+    //   dataItemInstance.owner,
+    // );
+
+    // console.log(
+    //   "IS VALID =",
+    //   await dataItemInstance.isValid(),
+    // );
 
     return dataItemInstance.getRaw().buffer;
   }
@@ -1017,16 +1075,6 @@ export class Othent
    * @returns Promise of Othent's `PermissionType[]`.
    */
   getPermissions(): Promise<PermissionType[]> {
-    return Promise.resolve([
-      "ACCESS_ADDRESS",
-      "ACCESS_PUBLIC_KEY",
-      "ACCESS_ALL_ADDRESSES",
-      "SIGN_TRANSACTION",
-      "ENCRYPT",
-      "DECRYPT",
-      "SIGNATURE",
-      "ACCESS_ARWEAVE_CONFIG",
-      "DISPATCH",
-    ]);
+    return Promise.resolve(Othent.ALL_PERMISSIONS);
   }
 }
