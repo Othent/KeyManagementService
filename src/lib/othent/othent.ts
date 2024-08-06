@@ -769,7 +769,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       }),
     ) satisfies TagData[];
 
-    // Delegate the DateItem creation and signing to `signDataItem`:
+    // Delegate the DataItem creation and signing to `signDataItem`:
     const signedDataItemBuffer = await this.signDataItem({
       data: transaction.data,
       tags: transactionTags,
