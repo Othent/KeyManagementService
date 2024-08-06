@@ -1,7 +1,11 @@
 import {
   Auth0Client,
+  AuthenticationError,
   CacheLocation,
   createAuth0Client,
+  MissingRefreshTokenError,
+  PopupCancelledError,
+  PopupTimeoutError,
 } from "@auth0/auth0-spa-js";
 import {
   CryptoOperationData,
@@ -418,13 +422,6 @@ export class OthentAuth0Client {
       //   this.logOut();
       // }
 
-      if (
-        err instanceof Error &&
-        err.message === "Unknown or invalid refresh token."
-      ) {
-        this.logOut();
-      }
-
       throw err;
     }
   }
@@ -448,6 +445,7 @@ export class OthentAuth0Client {
     await auth0Client.loginWithPopup({
       authorizationParams: this.getAuthorizationParams({
         redirect_uri: window.location.origin,
+        // TODO: Pass the last `connection`.
       }),
     });
 

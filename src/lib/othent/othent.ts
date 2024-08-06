@@ -51,6 +51,11 @@ import {
 import { AppInfo, OthentConfig, OthentOptions } from "../config/config.types";
 import { mergeOptions } from "../utils/options/options.utils";
 import ArweaveModule from "arweave";
+import {
+  MissingRefreshTokenError,
+  PopupCancelledError,
+  PopupTimeoutError,
+} from "@auth0/auth0-spa-js";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
@@ -457,7 +462,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
       if (
         err.message !== "Login required" &&
-        !err.message.startsWith("Missing Refresh Token")
+        !(err instanceof MissingRefreshTokenError)
       ) {
         throw err;
       }
@@ -489,8 +494,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
         if (!(err instanceof Error)) throw err;
 
         if (
-          err.message === "Popup closed" ||
-          err.message.startsWith("Unable to open a popup for loginWithPopup")
+          err instanceof PopupCancelledError ||
+          err instanceof PopupTimeoutError ||
+          err.message.startsWith("Unable to open a popup")
         ) {
           console.warn(err.message);
 
@@ -885,7 +891,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
   }
 
   /**
-   * The signDataItem() function allows you to create and sign a data item object, compatible with arbundles. These data items can then be submitted to an ANS-104 compatible bundler.
+   * The signDataItem() function allows you to create and sign a data item object, compatible with arbundles. These data
+   * items can then be submitted to an ANS-104 compatible bundler.
    * @param dataItem The data to sign.
    * @returns The signed data item.
    */
@@ -893,8 +900,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
 
     const { data, tags, ...options } = dataItem;
-
-    // console.log("publicKey =", publicKey.length, publicKey)
 
     const signer: Signer = {
       publicKey: toBuffer(publicKey), // => Buffer.from(toBase64(base64url), "base64");
