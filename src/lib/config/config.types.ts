@@ -153,11 +153,6 @@ export interface OthentOptions
    * details externally (e.g. cookie or `SharedPreferences`).
    */
   initialUserDetails?: UserDetails | null;
-
-  /**
-   * Crypto module needed for signing, if your environment doesn't provide one natively (e.g. React Native).
-   */
-  crypto?: Crypto | null;
 }
 
 export interface AppInfo {

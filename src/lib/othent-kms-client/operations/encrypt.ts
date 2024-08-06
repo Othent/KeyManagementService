@@ -5,7 +5,7 @@ import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType, stringToUint8Array } from "../../utils/arweaveUtils";
 
 // New format:
-// export type EncryptResponseData = boolstringean;
+// export type EncryptResponseData = string;
 
 // Old format:
 export interface EncryptResponseData {

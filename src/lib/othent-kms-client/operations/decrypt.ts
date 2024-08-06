@@ -8,7 +8,7 @@ import {
 } from "../../utils/arweaveUtils";
 
 // New format:
-// export type DecryptResponseData = boolstringean;
+// export type DecryptResponseData = string;
 
 // Old format:
 export interface DecryptResponseData {

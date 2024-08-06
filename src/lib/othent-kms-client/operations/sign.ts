@@ -5,7 +5,7 @@ import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType, stringToUint8Array } from "../../utils/arweaveUtils";
 
 // New format:
-// export type SignResponseData = boolstringean;
+// export type SignResponseData = string;
 
 // Old format:
 export interface SignResponseData {

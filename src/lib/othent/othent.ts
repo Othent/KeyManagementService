@@ -109,7 +109,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     let {
-      crypto: cryptoOption,
       appName,
       appVersion,
       initialUserDetails,
@@ -155,19 +154,19 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     this.gatewayConfig = gatewayConfig || DEFAULT_GATEWAY_CONFIG;
 
-    let crypto = cryptoOption;
+    let crypto: Crypto | null = null;
 
-    if (!crypto) {
-      if (typeof window !== "undefined") {
-        crypto = window.crypto;
-      } else if (typeof global !== "undefined") {
-        crypto = global.crypto;
-      } else if (crypto === undefined) {
-        throw new Error(
-          "A Crypto module is needed to use `signMessage` and `verifyMessage`. If you are sure you won't be using those, pass `crypto: null` as an option.",
-        );
-      }
+    if (typeof window !== "undefined") {
+      crypto = window.crypto;
+    } else if (typeof global !== "undefined") {
+      crypto = global.crypto;
+    } else {
+      throw new Error(
+        "A Crypto module is needed for Othent to work. If your environment doesn't natively provide one, you should polyfill it.",
+      );
     }
+
+    this.crypto = crypto;
 
     const { config } = this;
 
@@ -179,8 +178,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
         'In-memory refresh tokens cannot be used with `autoConnect = "eager"`. Use `autoConnect = "lazy"` instead',
       );
     }
-
-    this.crypto = crypto!;
 
     this.auth0 = new OthentAuth0Client({
       domain: config.auth0Domain,
@@ -706,49 +703,47 @@ export class Othent implements Omit<ArConnect, "connect"> {
    *
    * @param transaction The transaction to sign.
    *
-   * @returns A Promise containing the signed transaction.
+   * @returns A Promise containing a new signed transaction.
    */
   async sign(transaction: Transaction): Promise<Transaction> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
 
-    // TODO: This should return a new transaction, not mutate the one that's passed in:
-    // const arweave = initArweave(this.gatewayConfig);
+    const arweave = initArweave(this.gatewayConfig);
 
     // // Using transaction.tags won't work as those wound still be encoded:
-    // const transactionTags = (transaction.get("tags") as unknown as Tag[]).map((tag) => ({
-    //   name: tag.get("name", { decode: true, string: true }),
-    //   value: tag.get("value", { decode: true, string: true }),
-    // })) satisfies TagData[];
+    const transactionTags = (transaction.get("tags") as unknown as Tag[]).map(
+      (tag) => ({
+        name: tag.get("name", { decode: true, string: true }),
+        value: tag.get("value", { decode: true, string: true }),
+      }),
+    ) satisfies TagData[];
 
-    // const tags = this.addCommonTags(transactionTags);
+    const tags = this.addCommonTags(transactionTags);
 
-    // const transactionToSign = await arweave.createTransaction({
-    //   data: transaction.data,
-    //   owner: publicKey,
-    // });
+    // This function returns a new signed transaction. It doesn't mutate/sign the original one:
+    const transactionToSign = await arweave.createTransaction({
+      data: transaction.data,
+      owner: publicKey,
+      reward: transaction.reward,
+    });
 
-    // tags.forEach((tagData) => {
-    //   transactionToSign.addTag(tagData.name, tagData.value);
-    // });
+    tags.forEach((tagData) => {
+      transactionToSign.addTag(tagData.name, tagData.value);
+    });
 
-    // To mutate the original one instead of creating a new one...:
-    this.addCommonTags(transaction);
-    transaction.setOwner(publicKey);
-
-    const dataToSign = await transaction.getSignatureData();
+    const dataToSign = await transactionToSign.getSignatureData();
     const signatureBuffer = await this.api.sign(dataToSign, sub);
     const id = await hash(signatureBuffer);
 
-    transaction.setSignature({
+    transactionToSign.setSignature({
       id: uint8ArrayTob64Url(id),
       owner: publicKey,
       signature: uint8ArrayTob64Url(signatureBuffer),
-      // TODO: This was in ArConnect's docs:
-      // reward: signedFields.reward,
-      // tags: signedFields.tags,
+      tags: transactionToSign.tags,
+      reward: transactionToSign.reward,
     });
 
-    return transaction;
+    return transactionToSign;
   }
 
   /**
@@ -763,22 +758,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @returns The signed version of the transaction.
    */
   async dispatch(
-    // TODO: Accept a dataItem straight out of signDataItem()?
     transaction: Transaction,
     options?: DispatchOptions,
   ): Promise<ArDriveBundledTransactionData | UploadedTransactionData> {
-    const { sub, publicKey } = await this.requireUserDataOrThrow();
-
-    const signer: Signer = {
-      publicKey: toBuffer(publicKey),
-      signatureType: 1,
-      signatureLength: 512,
-      ownerLength: 512,
-      sign: this.api.getSignerSignFn(sub),
-      // Note we don't provide `verify` as it's not used anyway:
-      // verify: null,
-    };
-
     // Using transaction.tags won't work as those wound still be encoded:
     const transactionTags = (transaction.get("tags") as unknown as Tag[]).map(
       (tag) => ({
@@ -787,15 +769,15 @@ export class Othent implements Omit<ArConnect, "connect"> {
       }),
     ) satisfies TagData[];
 
-    const tags = this.addCommonTags(transactionTags);
-
-    const dateItem = createData(transaction.data, signer, { tags });
+    // Delegate the DateItem creation and signing to `signDataItem`:
+    const signedDataItemBuffer = await this.signDataItem({
+      data: transaction.data,
+      tags: transactionTags,
+      target: transaction.target,
+    });
 
     // TODO: https://turbo.ardrive.io/ returns `freeUploadLimitBytes`, so we can check before trying to send and potentially ever before signing.
     // TODO: If we do that, verify what's the difference in size if we do dateItem.getRaw() before and after signing is 512 bits.
-
-    // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
-    await dateItem.sign(signer);
 
     const url = `${options?.node || DEFAULT_DISPATCH_NODE}/tx`;
 
@@ -805,7 +787,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
       const res = await axios.post<ArDriveBundledTransactionResponseData>(
         url,
-        dateItem.getRaw(),
+        signedDataItemBuffer,
         {
           headers: {
             "Content-Type": "application/octet-stream",
@@ -827,20 +809,21 @@ export class Othent implements Omit<ArConnect, "connect"> {
     } catch (err) {
       console.warn(`Error dispatching transaction to ${url} =\n`, err);
 
-      await this.sign(transaction);
+      const signedTransaction = await this.sign(transaction);
 
       const arweave = options?.arweave ?? initArweave(this.gatewayConfig);
 
-      const uploader = await arweave.transactions.getUploader(transaction);
+      const uploader =
+        await arweave.transactions.getUploader(signedTransaction);
 
       while (!uploader.isComplete) {
         await uploader.uploadChunk();
       }
 
       return {
-        id: transaction.id,
-        signature: transaction.signature,
-        owner: transaction.owner,
+        id: signedTransaction.id,
+        signature: signedTransaction.signature,
+        owner: signedTransaction.owner,
         type: "BASE",
       } satisfies UploadedTransactionData;
     }
@@ -921,8 +904,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       ownerLength: 512,
       sign: this.api.getSignerSignFn(sub),
       // Note we don't provide `verify` as it's not used anyway:
-      // @ts-ignore
-      verify: () => true,
+      // verify: () => true,
     };
 
     // @ts-ignore
@@ -943,10 +925,12 @@ export class Othent implements Omit<ArConnect, "connect"> {
     };
 
     // TODO: git clone warp-bundles and try to see what's going on here...:
+    // TODO: This is wrong in https://github.com/arconnectio/ArConnect/blob/production/src/api/modules/sign_data_item/sign_data_item.background.ts
+    // const dataItemInstance = createData(typeof data === 'string' ? new Uint8Array(data) : data, signer, opts);
     const dataItemInstance = createData(data, signer, opts);
     // const dataItemInstance2 = createData(data, signer2, opts);
 
-    // const dataToSign2 = await dataItemInstance.getSignatureData(); // .signature() uses this
+    // const dataToSign2 = await dataItemInstance.getSignatureData(); // .sign() uses this
     // const dataToSign2 = await dataItemInstance.getRaw(); // ArConnect's .signDataItem() uses this
 
     // const signature = await this.api.sign(dataToSign2, sub);

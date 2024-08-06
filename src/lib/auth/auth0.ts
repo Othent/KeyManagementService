@@ -418,6 +418,13 @@ export class OthentAuth0Client {
       //   this.logOut();
       // }
 
+      if (
+        err instanceof Error &&
+        err.message === "Unknown or invalid refresh token."
+      ) {
+        this.logOut();
+      }
+
       throw err;
     }
   }
