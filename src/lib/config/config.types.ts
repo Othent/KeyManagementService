@@ -1,5 +1,6 @@
 import { UserDetails } from "../auth/auth0.types";
 import { TagData } from "../othent/othent.types";
+import { GatewayConfig } from "../utils/arconnect/arconnect.types";
 
 export type OthentStorageKey = `othent${string}`;
 
@@ -11,6 +12,11 @@ export type Auth0Strategy =
 export type AutoConnect = "eager" | "lazy" | "off";
 
 export interface OthentConfig {
+  /**
+   * Inject Othent's instance as `window.arweaveWallet` so that `arweave-js` can use it on the background.
+   */
+  inject?: boolean;
+
   /**
    * API base URL. Needed if you are using a private/self-hosted API and Auth0 tenant.
    */
@@ -101,8 +107,6 @@ export interface OthentConfig {
    * @defaultValue `[]`
    */
   tags: TagData[];
-
-  // TODO: Add gateway config here too
 }
 
 export interface OthentOptions
@@ -138,6 +142,11 @@ export interface OthentOptions
    * @defaultValue `false`
    */
   persistLocalStorage: boolean | OthentStorageKey;
+
+  /**
+   * Gateway config to connect to Arweave.
+   */
+  gatewayConfig?: GatewayConfig;
 
   /**
    * Initial user details. Useful for server-side rendered sites or native apps that might store the most recent user

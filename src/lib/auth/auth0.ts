@@ -25,7 +25,7 @@ import {
 import { EventListenersHandler } from "../utils/events/event-listener-handler";
 import { AuthListener } from "../othent/othent.types";
 import { AppInfo, OthentStorageKey } from "../config/config.types";
-import { cookieStorage } from "../utils/cookies/cookie-storage";
+import { getCookieStorage } from "../utils/cookies/cookie-storage";
 
 export class OthentAuth0Client {
   static PROVIDER_LABELS: Record<Auth0SubPrefix, Auth0ProviderLabel> = {
@@ -197,6 +197,8 @@ export class OthentAuth0Client {
     const { cookieKey, localStorageKey } = this;
 
     if (cookieKey) {
+      const cookieStorage = getCookieStorage();
+
       if (userDetails) {
         cookieStorage.setItem(cookieKey, JSON.stringify(userDetails));
       } else if (cookieStorage.getItem(cookieKey) !== null) {

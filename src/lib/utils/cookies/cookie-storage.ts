@@ -177,10 +177,19 @@ export class CookieStorage implements Storage {
   }
 }
 
-const isLocalhost =
-  process.env.NODE_ENV === "development" && location.hostname === "localhost";
+let cookieStorage: CookieStorage | null = null;
 
-export const cookieStorage = new CookieStorage({
-  secure: isLocalhost ? false : undefined,
-  domain: isLocalhost ? false : undefined,
-});
+export function getCookieStorage() {
+  if (!cookieStorage) {
+    const isLocalhost =
+      process.env.NODE_ENV === "development" &&
+      location?.hostname === "localhost";
+
+    cookieStorage = new CookieStorage({
+      secure: isLocalhost ? false : undefined,
+      domain: isLocalhost ? false : undefined,
+    });
+  }
+
+  return cookieStorage;
+}

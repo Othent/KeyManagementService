@@ -2,11 +2,7 @@ import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
 import { BufferObject, CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import {
-  BinaryDataType,
-  binaryDataTypeToString,
-  stringToUint8Array,
-} from "../../utils/arweaveUtils";
+import { BinaryDataType, stringToUint8Array } from "../../utils/arweaveUtils";
 
 // New format:
 // export type SignResponseData = boolstringean;

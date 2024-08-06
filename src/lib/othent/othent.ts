@@ -50,21 +50,17 @@ import {
 } from "./othent.types";
 import { AppInfo, OthentConfig, OthentOptions } from "../config/config.types";
 import { mergeOptions } from "../utils/options/options.utils";
+import ArweaveModule from "arweave";
 
-async function initArweave(apiConfig: ApiConfig) {
-  return import("arweave/web").then((ArweaveModule) => {
-    // TODO: Fix this import issue properly:
-    const ArweaveClass = (
-      ArweaveModule as unknown as { default: { default: typeof Arweave } }
-    ).default.default;
+function initArweave(apiConfig: ApiConfig) {
+  const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
+    .default;
 
-    return ArweaveClass.init(apiConfig);
-  });
+  return ArweaveClass.init(apiConfig);
 }
 
-export class Othent
-  implements Omit<ArConnect, "connect" | "addToken" | "isTokenAdded">
-{
+// Omit `connect()` just because to Othent's version returning some data:
+export class Othent implements Omit<ArConnect, "connect"> {
   static walletName = CLIENT_NAME;
 
   static walletVersion = CLIENT_VERSION;
@@ -89,6 +85,8 @@ export class Othent
 
   private errorEventListenerHandler =
     new EventListenersHandler<ErrorListener>();
+
+  private tokens = new Set<string>();
 
   walletName = CLIENT_NAME;
 
@@ -117,6 +115,7 @@ export class Othent
       initialUserDetails,
       persistCookie,
       persistLocalStorage,
+      gatewayConfig,
       ...configOptions
     } = options;
 
@@ -153,6 +152,8 @@ export class Othent
       name: appName,
       version: appVersion,
     };
+
+    this.gatewayConfig = gatewayConfig || DEFAULT_GATEWAY_CONFIG;
 
     let crypto = cryptoOption;
 
@@ -196,12 +197,9 @@ export class Othent
       this.connect();
     }
 
-    // TODO: Remove this once tested in React Native:
-    (window as any).initArweave = () => {
-      return initArweave(this.gatewayConfig).then((arweave) =>
-        console.log("DONE =", arweave),
-      );
-    };
+    if (config.inject) {
+      window.arweaveWallet = this as unknown as ArConnect;
+    }
 
     if (!config.throwErrors) {
       const walletMethods = [
@@ -687,12 +685,12 @@ export class Othent
       transactionOrTags.addTag(name, value);
     }
 
+    transactionOrTags.addTag("App-Name", this.appInfo.name);
+    transactionOrTags.addTag("App-Version", this.appInfo.version);
+
     for (const { name, value } of ANALYTICS_TAGS) {
       transactionOrTags.addTag(name, value);
     }
-
-    transactionOrTags.addTag("App-Name", this.appInfo.name);
-    transactionOrTags.addTag("App-Version", this.appInfo.version);
   }
 
   /**
@@ -713,38 +711,35 @@ export class Othent
   async sign(transaction: Transaction): Promise<Transaction> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
 
-    let newTransaction: Transaction = transaction;
+    // TODO: This should return a new transaction, not mutate the one that's passed in:
+    // const arweave = initArweave(this.gatewayConfig);
 
-    try {
-      // TODO: This should not be using a try-catch that might, in some cases, fallback to mutating the `transaction`
-      // param, but `arweave` / `initArweave` will throw an error in React Native:
+    // // Using transaction.tags won't work as those wound still be encoded:
+    // const transactionTags = (transaction.get("tags") as unknown as Tag[]).map((tag) => ({
+    //   name: tag.get("name", { decode: true, string: true }),
+    //   value: tag.get("value", { decode: true, string: true }),
+    // })) satisfies TagData[];
 
-      const arweave = await initArweave(this.gatewayConfig);
+    // const tags = this.addCommonTags(transactionTags);
 
-      newTransaction = await arweave.createTransaction({
-        data: transaction.data,
-        tags: transaction.get("tags") as unknown as Tag[],
-        // owner: publicKey,
-      });
+    // const transactionToSign = await arweave.createTransaction({
+    //   data: transaction.data,
+    //   owner: publicKey,
+    // });
 
-      // const dataToSign1 = await transaction.getSignatureData();
-      // const dataToSign2 = await newTransaction.getSignatureData();
-      // console.log("ARE THEY EQUAL?", dataToSign1, dataToSign2);
-    } catch (err) {
-      console.warn(`Error cloning the Transaction object =\n`, err);
-    }
+    // tags.forEach((tagData) => {
+    //   transactionToSign.addTag(tagData.name, tagData.value);
+    // });
 
-    newTransaction.setOwner(publicKey);
+    // To mutate the original one instead of creating a new one...:
+    this.addCommonTags(transaction);
+    transaction.setOwner(publicKey);
 
-    this.addCommonTags(newTransaction);
-
-    const dataToSign = await newTransaction.getSignatureData();
-
+    const dataToSign = await transaction.getSignatureData();
     const signatureBuffer = await this.api.sign(dataToSign, sub);
+    const id = await hash(signatureBuffer);
 
-    let id = await hash(signatureBuffer);
-
-    newTransaction.setSignature({
+    transaction.setSignature({
       id: uint8ArrayTob64Url(id),
       owner: publicKey,
       signature: uint8ArrayTob64Url(signatureBuffer),
@@ -753,7 +748,7 @@ export class Othent
       // tags: signedFields.tags,
     });
 
-    return newTransaction;
+    return transaction;
   }
 
   /**
@@ -784,14 +779,15 @@ export class Othent
       // verify: null,
     };
 
-    // TODO: Do not mutate the original transaction:
-    this.addCommonTags(transaction);
-
     // Using transaction.tags won't work as those wound still be encoded:
-    const tags = (transaction.get("tags") as unknown as Tag[]).map((tag) => ({
-      name: tag.get("name", { decode: true, string: true }),
-      value: tag.get("value", { decode: true, string: true }),
-    })) satisfies TagData[];
+    const transactionTags = (transaction.get("tags") as unknown as Tag[]).map(
+      (tag) => ({
+        name: tag.get("name", { decode: true, string: true }),
+        value: tag.get("value", { decode: true, string: true }),
+      }),
+    ) satisfies TagData[];
+
+    const tags = this.addCommonTags(transactionTags);
 
     const dateItem = createData(transaction.data, signer, { tags });
 
@@ -833,8 +829,7 @@ export class Othent
 
       await this.sign(transaction);
 
-      const arweave =
-        options?.arweave ?? (await initArweave(this.gatewayConfig));
+      const arweave = options?.arweave ?? initArweave(this.gatewayConfig);
 
       const uploader = await arweave.transactions.getUploader(transaction);
 
@@ -919,47 +914,58 @@ export class Othent
     // console.log("publicKey =", publicKey.length, publicKey)
 
     const signer: Signer = {
-      publicKey: toBuffer(publicKey),
+      publicKey: toBuffer(publicKey), // => Buffer.from(toBase64(base64url), "base64");
       // publicKey: Buffer.from(publicKey, "base64"),
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
       sign: this.api.getSignerSignFn(sub),
       // Note we don't provide `verify` as it's not used anyway:
-      // verify: null,
+      // @ts-ignore
+      verify: () => true,
     };
+
+    // @ts-ignore
+    // const signer2: Signer = {
+    //   publicKey: toBuffer(publicKey),
+    //   // publicKey: Buffer.from(publicKey, "base64"),
+    //   signatureType: 1,
+    //   signatureLength: 512,
+    //   ownerLength: 512,
+    //   // sign: this.api.getSignerSignFn(sub),
+    //   // Note we don't provide `verify` as it's not used anyway:
+    //   // verify: null,
+    // };
 
     const opts: DataItemCreateOptions = {
       ...options,
       tags: this.addCommonTags(tags),
     };
 
+    // TODO: git clone warp-bundles and try to see what's going on here...:
     const dataItemInstance = createData(data, signer, opts);
+    // const dataItemInstance2 = createData(data, signer2, opts);
 
-    // console.log(
-    //   "OLD SIGNATURE =",
-    //   dataItemInstance.rawSignature,
+    // const dataToSign2 = await dataItemInstance.getSignatureData(); // .signature() uses this
+    // const dataToSign2 = await dataItemInstance.getRaw(); // ArConnect's .signDataItem() uses this
+
+    // const signature = await this.api.sign(dataToSign2, sub);
+
+    // dataItemInstance2.setSignature(
+    //   Buffer.from(signature)
     // );
 
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
-    const rawIdBuffer = await dataItemInstance.sign(signer);
-    // console.log(rawIdBuffer);
-
-    // await dataItemInstance.setSignature(rawIdBuffer);
+    await dataItemInstance.sign(signer);
 
     // console.log(
-    //   "NEW SIGNATURE =",
-    //   dataItemInstance.rawSignature,
+    //   dataItemInstance.getRaw(),
+    //   dataItemInstance2.getRaw(),
     // );
 
     // console.log(
     //   "OWNER =",
     //   dataItemInstance.owner,
-    // );
-
-    // console.log(
-    //   "IS VALID =",
-    //   await dataItemInstance.isValid(),
     // );
 
     return dataItemInstance.getRaw().buffer;
@@ -1076,5 +1082,31 @@ export class Othent
    */
   getPermissions(): Promise<PermissionType[]> {
     return Promise.resolve(Othent.ALL_PERMISSIONS);
+  }
+
+  /**
+   * Mocked implementation to add tokens.
+   * Othent doesn't currently support this feature and only tracks added tokens temporarily in memory.
+   */
+  addToken(id: string, type?: string, gateway?: GatewayConfig): Promise<void> {
+    console.warn(
+      "Othent doesn't currently support this feature and only tracks added tokens temporarily in memory.",
+    );
+
+    this.tokens.add(id);
+
+    return Promise.resolve();
+  }
+
+  /**
+   * Mocked implementation to check if a token has been added.
+   * Othent doesn't currently support this feature and only tracks added tokens temporarily in memory.
+   */
+  isTokenAdded(id: string): Promise<boolean> {
+    console.warn(
+      "Othent doesn't currently support this feature and only tracks added tokens temporarily in memory.",
+    );
+
+    return Promise.resolve(this.tokens.has(id));
   }
 }

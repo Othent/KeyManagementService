@@ -23,7 +23,10 @@ export function padString(input: string): string {
   return buffer.toString();
 }
 
-function encode(input: string | Buffer, encoding: string = "utf8"): string {
+export function encode(
+  input: string | Buffer,
+  encoding: string = "utf8",
+): string {
   if (Buffer.isBuffer(input)) {
     return fromBase64(input.toString("base64"));
   }
@@ -31,19 +34,19 @@ function encode(input: string | Buffer, encoding: string = "utf8"): string {
   return fromBase64(Buffer.from(input as string, encoding).toString("base64"));
 }
 
-function decode(base64url: string, encoding: string = "utf8"): string {
+export function decode(base64url: string, encoding: string = "utf8"): string {
   // @ts-ignore
   return Buffer.from(toBase64(base64url), "base64").toString(encoding);
 }
 
-function toBase64(base64url: string | Buffer): string {
+export function toBase64(base64url: string | Buffer): string {
   // We this to be a string so we can do .replace on it. If it's
   // already a string, this is a noop.
   base64url = base64url.toString();
   return padString(base64url).replace(/\-/g, "+").replace(/_/g, "/");
 }
 
-function fromBase64(base64: string): string {
+export function fromBase64(base64: string): string {
   return base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 

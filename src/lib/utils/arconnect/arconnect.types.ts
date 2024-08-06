@@ -83,6 +83,7 @@ export abstract class ArConnect {
    */
   abstract encrypt(
     data: string,
+    // TODO: In the docs this has a single property called `name`. See https://docs.arconnect.io/api/encrypt.
     options: {
       algorithm: string;
       hash: string;
@@ -100,12 +101,15 @@ export abstract class ArConnect {
    */
   abstract decrypt(
     data: Uint8Array,
+    // TODO: In the docs this has a single property called `name`. See https://docs.arconnect.io/api/encrypt.
     options: {
       algorithm: string;
       hash: string;
       salt?: string;
     },
-  ): Promise<string>;
+  ) // TODO: Wrong? Should this return a Uint8Array? From ArConnect's docs/examples, that seems to be the case, but types
+  // are wrong.
+  : Promise<string>;
 
   /**
    * Get the user's custom Arweave config set in the extension
