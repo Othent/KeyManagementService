@@ -1,7 +1,11 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-packageVersion=$(node -p -e "require('./package.json').version")
+# packageVersion=$(node -p -e "require('./package.json').version")
+
+packageVersion=$npm_package_version
+
+echo "TEST = $packageVersion"
 
 sed -i -e "s/CLIENT_VERSION = \".*\"/CLIENT_VERSION = \"$packageVersion\"/" ./src/lib/config/config.constants.ts
 # -i = in-place edit

@@ -51,7 +51,8 @@ Learn how to set it up at https://docs.othent.io or looking at our demo's code a
         npm version premajor --preid=beta
         ```
 
-    The `preversion`, `version` and `postversion` scripts defined in `package.json` will test, format, build, tag and push all the changes automatically.
+    The `preversion`, `version` and `postversion` scripts defined in `package.json` will test, format, build, tag and
+    push all the changes automatically. See https://docs.npmjs.com/cli/v10/commands/npm-version.
 
 2.  To publish a stable release, simply run [`pnpm publish`](https://docs.npmjs.com/cli/v8/commands/npm-publish).
 
