@@ -1,11 +1,7 @@
 import {
   Auth0Client,
-  AuthenticationError,
   CacheLocation,
   createAuth0Client,
-  MissingRefreshTokenError,
-  PopupCancelledError,
-  PopupTimeoutError,
 } from "@auth0/auth0-spa-js";
 import {
   CryptoOperationData,
@@ -16,10 +12,10 @@ import {
   TransactionInput,
   OthentAuth0ClientOptions,
   StoredUserDetails,
-  OthentWalletAddressName,
-  OthentSub,
-  Auth0SubPrefix,
+  Auth0Sub,
+  Auth0Provider,
   Auth0ProviderLabel,
+  OthentWalletAddressLabel,
 } from "./auth0.types";
 import {
   CLIENT_NAME,
@@ -30,12 +26,14 @@ import { EventListenersHandler } from "../utils/events/event-listener-handler";
 import { AuthListener } from "../othent/othent.types";
 import { AppInfo, OthentStorageKey } from "../config/config.types";
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
+import { getAnsProfile } from "../utils/ans/ans.utils";
 
 export class OthentAuth0Client {
-  static PROVIDER_LABELS: Record<Auth0SubPrefix, Auth0ProviderLabel> = {
+  static PROVIDER_LABELS: Record<Auth0Provider, Auth0ProviderLabel> = {
     apple: "Apple",
     auth0: "E-Mail",
     "google-oauth2": "Google",
+    // TODO: Complete these values:
     "<LinkedIn>": "LinkedIn",
     "<X>": "X",
     "<Meta>": "Meta",
@@ -84,16 +82,22 @@ export class OthentAuth0Client {
     );
   }
 
-  static getUserDetails<D>(idToken: IdTokenWithData<D>): UserDetails {
-    const sub = (idToken.sub || "") as OthentSub;
-    const email = idToken.email || "";
-    const subPrefix = sub.split("|")[0] as Auth0SubPrefix;
-    const providerLabel =
-      OthentAuth0Client.PROVIDER_LABELS[subPrefix] || "Unknown Provider";
-    const walletAddressName: OthentWalletAddressName = `${providerLabel} (${email})`;
+  static async getUserDetails<D>(
+    idToken: IdTokenWithData<D>,
+  ): Promise<UserDetails> {
+    const { email = "", walletAddress } = idToken;
+    const sub = (idToken.sub || "") as Auth0Sub;
+    const authProvider = sub.split("|")[0] as Auth0Provider;
 
-    // TODO: Reverse-resolve walletName to https://ans.gg too...
-    // https://arweave.bio/profile/<ADDRESS> (not working)
+    let walletAddressLabel: OthentWalletAddressLabel | null =
+      await getAnsProfile(walletAddress);
+
+    if (!walletAddressLabel) {
+      const providerLabel =
+        OthentAuth0Client.PROVIDER_LABELS[authProvider] || "Unknown Provider";
+
+      walletAddressLabel = `${providerLabel} (${email})`;
+    }
 
     return {
       sub,
@@ -112,8 +116,9 @@ export class OthentAuth0Client {
       emailVerified: !!idToken.email_verified,
       owner: idToken.owner,
       walletAddress: idToken.walletAddress,
-      walletAddressName,
+      walletAddressLabel,
       authSystem: idToken.authSystem,
+      authProvider,
     };
   }
 
@@ -295,12 +300,12 @@ export class OthentAuth0Client {
     });
   }
 
-  private updateUserDetails<D>(
+  private async updateUserDetails<D>(
     idToken: IdTokenWithData<D>,
-  ): UserDetails | null {
+  ): Promise<UserDetails | null> {
     const nextUserDetails: UserDetails | null =
       idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
-        ? OthentAuth0Client.getUserDetails(idToken)
+        ? await OthentAuth0Client.getUserDetails(idToken)
         : null;
 
     return this.setUserDetails(nextUserDetails);
@@ -404,7 +409,7 @@ export class OthentAuth0Client {
 
       if (!idToken) throw new Error("Could not get the user's details");
 
-      const userDetails = this.updateUserDetails(idToken);
+      const userDetails = await this.updateUserDetails(idToken);
 
       return {
         ...getTokenSilentlyResponse,
@@ -445,8 +450,17 @@ export class OthentAuth0Client {
     await auth0Client.loginWithPopup({
       authorizationParams: this.getAuthorizationParams({
         redirect_uri: window.location.origin,
-        // TODO: Pass the last `connection`.
+        // TODO: This doesn't seem to change anything. It could be used to remember the last provider the user used.
+        // connection: "auth0",
       }),
+
+      // TODO: Left this comment here for reference in case this becomes an issue in iOS:
+      /**
+       * Accepts an already-created popup window to use. If not specified, the SDK
+       * will create its own. This may be useful for platforms like iOS that have
+       * security restrictions around when popups can be invoked (e.g. from a user click event)
+       */
+      // { popup: <POPUP> }
     });
 
     return this.getTokenSilently();
@@ -496,8 +510,8 @@ export class OthentAuth0Client {
     return this.userDetails?.walletAddress || null;
   }
 
-  getCachedUserAddressName() {
-    return this.userDetails?.walletAddressName || null;
+  getCachedUserAddressLabel() {
+    return this.userDetails?.walletAddressLabel || null;
   }
 
   getCachedUserEmail() {

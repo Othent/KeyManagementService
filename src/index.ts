@@ -20,7 +20,7 @@ export {
   DEFAULT_LOCAL_STORAGE_KEY,
   // CLIENT_NAME,     // Already exported as static member
   // CLIENT_VERSION,  // Already exported as static member
-  // ANALYTICS_TAGS,  // Not needed
+  // ANALYTICS_TAGS,  // Not needed (only used internally)
 } from "./lib/config/config.constants";
 
 export * from "./lib/config/config.types";
@@ -28,7 +28,15 @@ export * from "./lib/config/config.types";
 // Auth0:
 // Almost everything here is internal.
 
-export { OthentWalletAddressName, UserDetails } from "./lib/auth/auth0.types";
+export {
+  Auth0Provider,
+  Auth0Sub,
+  // Auth0ProviderLabel,    // Not needed (only used internally)
+  Auth0WalletAddressLabel,
+  ANSDomain,
+  OthentWalletAddressLabel,
+  UserDetails,
+} from "./lib/auth/auth0.types";
 
 // API:
 // Export for backwards compatibility / easier migration.

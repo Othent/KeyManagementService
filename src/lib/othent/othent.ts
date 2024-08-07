@@ -646,12 +646,12 @@ export class Othent implements Omit<ArConnect, "connect"> {
    */
   getSyncWalletNames(): Promise<Record<B64UrlString, string>> {
     const address = this.auth0.getCachedUserAddress();
-    const addressName = this.auth0.getCachedUserAddressName();
+    const addressLabel = this.auth0.getCachedUserAddressLabel();
 
     return Promise.resolve(
-      address && addressName
+      address && addressLabel
         ? {
-            [address]: addressName,
+            [address]: addressLabel,
           }
         : {},
     );
