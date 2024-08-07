@@ -784,6 +784,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // TODO: https://turbo.ardrive.io/ returns `freeUploadLimitBytes`, so we can check before trying to send and potentially ever before signing.
     // TODO: If we do that, verify what's the difference in size if we do dateItem.getRaw() before and after signing is 512 bits.
+    // TODO: Also see https://github.com/arconnectio/ArConnect/blob/production/src/api/modules/dispatch/dispatch.background.ts#L107
 
     const url = `${options?.node || DEFAULT_DISPATCH_NODE}/tx`;
 
