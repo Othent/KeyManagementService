@@ -51,7 +51,7 @@ export const DEFAULT_LOCAL_STORAGE_KEY =
 export const CLIENT_NAME = "Othent KMS" as const;
 
 // This is updated automatically from Husky's pre-commit hook:
-export const CLIENT_VERSION = "2.0.0-beta.9" as const;
+export const CLIENT_VERSION = "2.0.0-beta.10" as const;
 
 export const ANALYTICS_TAGS = [
   {
