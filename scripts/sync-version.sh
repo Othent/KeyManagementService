@@ -15,8 +15,12 @@ if [ -z "$packageVersion" ]; then
     exit 1
 fi
 
-if [ -n "$npm_package_name" ] && [ "$npm_lifecycle_event" == "version" ] && [ "$packageVersionFromNPM" != "$packageVersionFromJSON" ]; then
+if [ -n "$npm_package_name" ] && [ "$npm_lifecycle_event" == "version" ]; then
+  if [ "$packageVersionFromNPM" != "$packageVersionFromJSON" ]; then
     echo -e "\033[0;32m✔\033[0m Updating $npm_package_name from '$packageVersionFromJSON' to '$packageVersionFromNPM'..."
+  else
+    echo -e "\033[0;32m✔\033[0m Updating $npm_package_name to '$packageVersionFromNPM'..."
+  fi
 fi
 
 sed -i -e "s/CLIENT_VERSION = \".*\"/CLIENT_VERSION = \"$packageVersion\"/" ./src/lib/config/config.constants.ts
