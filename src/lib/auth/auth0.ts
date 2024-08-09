@@ -155,11 +155,6 @@ export class OthentAuth0Client {
     const cacheImplementation: ICache | undefined =
       typeof cache === "object" ? cache : undefined;
 
-    console.log({
-      useRefreshTokens,
-      cacheLocation,
-    });
-
     this.loginMethod = loginMethod;
     this.redirectURI = redirectURI;
     this.returnToURI = returnToURI;
