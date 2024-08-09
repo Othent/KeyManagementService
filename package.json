@@ -29,7 +29,7 @@
     "test": "bun test",
     "prettier": "prettier --write .",
     "preversion": "pnpm test",
-    "version": "pnpm run build && bash ./scripts/sync-version.sh && git add .",
+    "version": "bash ./scripts/sync-version.sh && pnpm run build && git add .",
     "postversion": "git push && git push --tags",
     "prepare": "husky"
   },
