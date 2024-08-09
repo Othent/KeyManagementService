@@ -1,7 +1,7 @@
 # See https://gist.github.com/moos/4635bda5b04dc8113d8ea7ee974cabc2
 packageVersionFromNPM=$npm_package_version
 
-if [ "$npm_lifecycle_event" == "foo" ] && [ -z "$packageVersionFromNPM" ]; then
+if [ "$npm_lifecycle_event" == "version" ] && [ -z "$packageVersionFromNPM" ]; then
     echo -e "\n\033[0;31mpackageVersionFromNPM (npm_package_version) variable is not defined!\n"
     exit 1
 fi
@@ -15,7 +15,7 @@ if [ -z "$packageVersion" ]; then
     exit 1
 fi
 
-if [ -n "$npm_package_name" ] && [ "$npm_lifecycle_event" == "foo" ] && [ "$packageVersionFromNPM" != "$packageVersionFromJSON" ]; then
+if [ -n "$npm_package_name" ] && [ "$npm_lifecycle_event" == "version" ] && [ "$packageVersionFromNPM" != "$packageVersionFromJSON" ]; then
     echo -e "\033[0;32m✔\033[0m Updating $npm_package_name from '$packageVersionFromJSON' to '$packageVersionFromNPM'..."
 fi
 
