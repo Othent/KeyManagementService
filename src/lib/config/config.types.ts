@@ -1,19 +1,33 @@
+import { ICache } from "@auth0/auth0-spa-js";
 import { UserDetails } from "../auth/auth0.types";
 import { TagData } from "../othent/othent.types";
 import { GatewayConfig } from "../utils/arconnect/arconnect.types";
+import { UrlString } from "../utils/typescript/url.types";
 
 export type OthentStorageKey = `othent${string}`;
 
-export type Auth0Strategy =
-  | "iframe-cookies"
-  | "refresh-localstorage"
-  | "refresh-memory";
+export type Auth0Strategy = "cross-site-cookies" | "refresh-tokens";
+
+export type Auth0Cache = "memory" | "localstorage" | ICache;
+
+export type Auth0CacheType = "memory" | "localstorage" | "custom";
+
+export type Auth0RedirectUri =
+  | UrlString
+  | `${string}.auth0://${string}/ios/${string}/callback`
+  | `${string}.auth0://${string}/android/${string}/callback`;
+
+export type Auth0RedirectUriWithParams = `${Auth0RedirectUri}?${string}`;
+
+export type Auth0LogInMethod = "popup" | "redirect";
 
 export type AutoConnect = "eager" | "lazy" | "off";
 
 export interface OthentConfig {
   /**
    * Inject Othent's instance as `window.arweaveWallet` so that `arweave-js` can use it on the background.
+   *
+   * @defaultValue `false`
    */
   inject?: boolean;
 
@@ -36,21 +50,75 @@ export interface OthentConfig {
   /**
    * Possible values are:
    *
-   * - `iframe-cookies`: Use cross-site cookies for authentication and store the cache in memory. Not recommended, as
-   *   this won't work in browsers that block cross-site cookies, such as Brave.
+   * - `refresh-tokens`: Use refresh tokens for authentication. This is the most secure and robust option.
    *
-   * - `refresh-localstorage`: Use refresh tokens for authentication and store the cache in localStorage. This makes it
-   *   possible for new tabs to automatically log in, even after up to 2 weeks of inactivity (i.e. "keep me logged in"),
-   *   but offers a larger attack surface to attackers trying to get a hold of the refresh / access tokens.
+   * - `cross-site-cookies`: Use cross-site cookies for authentication. Not recommended, as this won't work in browsers
+   *   that block cross-site cookies, such as Brave.
    *
-   * - `refresh-memory`: Use cross-domain cookies for authentication and store the cache in memory. This is the most
-   *   secure and recommended option, but new tabs won't be able to automatically log in (without a previous user
-   *   action). However, you can achieve that setting the `localStorage = true` option, which stores the user details
-   *   but not the refresh / access tokens in `localStorage`.
-   *
-   * @defaultValue `refresh-memory`
+   * @defaultValue `refresh-tokens`
    */
   auth0Strategy: Auth0Strategy;
+
+  /**
+   * Possible values are:
+   *
+   * - `memory`: This is the most secure and recommended option/location to store tokens, but new tabs won't be able to
+   *   automatically log in using a popup without a previous user action.
+   *
+   *   However, by setting the `persistLocalStorage = true` option, the user details (but not the refresh / access
+   *   tokens) will be persisted in `localStorage` until the most recent refresh token's expiration date, allowing you
+   *   to read the user details (`.getUserDetails()` / `.getSyncUserDetails()`) and make it look in the UI as if the
+   *   user were already logged in.
+   *
+   * - `localstorage`: Store tokens `localStorage`. This makes it possible for new tabs to automatically log in using a
+   *   popup, even after up to 2 weeks of inactivity (i.e. "keep me logged in"), but offers a larger attack surface to
+   *   attackers trying to get a hold of the refresh / access tokens.
+   *
+   * - `custom`: Provide a custom storage implementation that implements Auth0's
+   *   [`ICache`](https://auth0.github.io/auth0-spa-js/interfaces/ICache.html). Useful for mobile apps (e.g. React
+   *   Native).
+   *
+   * @defaultValue `memory`
+   */
+  auth0Cache: Auth0CacheType;
+
+  /**
+   * Possible values are:
+   *
+   * - `popup`: Open Auth0's authentication page on a popup window while the original page just waits for authentication
+   *   to take place or to timeout. This option is faster and less intrusive.
+   *
+   * - `redirect`: Navigate to Auth0's authentication page, which will redirect users back to your site or
+   *   `auth0RedirectURI` upon authentication. Once they are redirected back, the URL will show a `code` and `state`
+   *   query parameters for a second or two, until the authentication flow is completed.
+   *
+   * @see https://auth0.github.io/auth0-spa-js/classes/Auth0Client.html#loginWithRedirect
+   * @see https://auth0.github.io/auth0-spa-js/classes/Auth0Client.html#handleRedirectCallback
+   * @see https://auth0.github.io/auth0-spa-js/classes/Auth0Client.html#loginWithPopup
+   *
+   * @defaultValue `popup`
+   */
+  auth0LogInMethod: Auth0LogInMethod;
+
+  // TODO: Consider adding `auth0RedirectURI` and `auth0ReturnToURI` options to `connect()` and `disconnect()` too:
+
+  /**
+   * Auth0's callback URL (`redirect_uri`) used during the authentication flow.
+   *
+   * @see https://auth0.com/docs/authenticate/login/redirect-users-after-login
+   *
+   * @defaultValue `location.origin` (when available in the platform)
+   */
+  auth0RedirectURI: Auth0RedirectUri | null;
+
+  /**
+   * Auth0's logout URL (`returnTo`) used during the logout flow.
+   *
+   * @see https://auth0.com/docs/authenticate/login/logout/redirect-users-after-logout
+   *
+   * @defaultValue `location.origin` (when available in the platform)
+   */
+  auth0ReturnToURI: Auth0RedirectUri | null;
 
   /**
    * Name of the cookie where the user details JSON will be stored.
@@ -110,7 +178,9 @@ export interface OthentConfig {
 }
 
 export interface OthentOptions
-  extends Partial<Omit<OthentConfig, "cookieKey" | "localStorageKey">> {
+  extends Partial<
+    Omit<OthentConfig, "cookieKey" | "localStorageKey" | "auth0Cache">
+  > {
   /**
    * Name of your app. This will add a tag `App-Name: <appName>` to any transaction signed or sent using `Othent.sign`,
    * `Othent.dispatch` or `Othent.signDataItem`.
@@ -153,6 +223,26 @@ export interface OthentOptions
    * details externally (e.g. cookie or `SharedPreferences`).
    */
   initialUserDetails?: UserDetails | null;
+
+  /**
+   * Possible values are:
+   *
+   * - `memory`: This is the most secure and recommended option/location to store tokens, but new tabs won't be able to
+   *   automatically log in using a popup without a previous user action. However, you can set
+   *   `persistLocalStorage = true`, which stores the user details, but not the refresh / access tokens, in
+   *   `localStorage`.
+   *
+   * - `localstorage`: Store tokens `localStorage`. This makes it possible for new tabs to automatically log in using a
+   *   popup, even after up to 2 weeks of inactivity (i.e. "keep me logged in"), but offers a larger attack surface to
+   *   attackers trying to get a hold of the refresh / access tokens.
+   *
+   * - `custom`: Provide a custom storage implementation that implements Auth0's
+   *   [`ICache`](https://auth0.github.io/auth0-spa-js/interfaces/ICache.html). Useful for mobile apps (e.g. React
+   *   Native).
+   *
+   * @defaultValue `memory`
+   */
+  auth0Cache: Auth0Cache;
 }
 
 export interface AppInfo {

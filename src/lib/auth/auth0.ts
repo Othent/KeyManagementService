@@ -2,6 +2,7 @@ import {
   Auth0Client,
   CacheLocation,
   createAuth0Client,
+  ICache,
 } from "@auth0/auth0-spa-js";
 import {
   CryptoOperationData,
@@ -24,7 +25,13 @@ import {
 } from "../config/config.constants";
 import { EventListenersHandler } from "../utils/events/event-listener-handler";
 import { AuthListener } from "../othent/othent.types";
-import { AppInfo, OthentStorageKey } from "../config/config.types";
+import {
+  AppInfo,
+  Auth0LogInMethod,
+  Auth0RedirectUri,
+  Auth0RedirectUriWithParams,
+  OthentStorageKey,
+} from "../config/config.types";
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
 
@@ -40,6 +47,12 @@ export class OthentAuth0Client {
     "<Twitch>": "Twitch",
     github: "GitHub",
   };
+
+  private loginMethod: Auth0LogInMethod;
+
+  private redirectURI: Auth0RedirectUri;
+
+  private returnToURI: Auth0RedirectUri;
 
   private auth0ClientPromise: Promise<Auth0Client | null> =
     Promise.resolve(null);
@@ -126,26 +139,41 @@ export class OthentAuth0Client {
     domain,
     clientId,
     strategy,
-    cookieKey,
-    localStorageKey,
+    cache,
     refreshTokenExpirationMs,
+    loginMethod,
+    redirectURI,
+    returnToURI,
     appInfo,
     initialUserDetails,
+    cookieKey,
+    localStorageKey,
   }: OthentAuth0ClientOptions) {
-    const useRefreshTokens = strategy !== "iframe-cookies";
+    const useRefreshTokens = strategy === "refresh-tokens";
+    const cacheLocation: CacheLocation | undefined =
+      typeof cache === "string" ? cache : undefined;
+    const cacheImplementation: ICache | undefined =
+      typeof cache === "object" ? cache : undefined;
 
-    const cacheLocation: CacheLocation | undefined = (
-      useRefreshTokens ? strategy.replace("refresh-", "") : "memory"
-    ) as CacheLocation;
+    console.log({
+      useRefreshTokens,
+      cacheLocation,
+    });
+
+    this.loginMethod = loginMethod;
+    this.redirectURI = redirectURI;
+    this.returnToURI = returnToURI;
 
     this.auth0ClientPromise = createAuth0Client({
       domain,
       clientId,
       useRefreshTokens,
       cacheLocation,
+      cache: cacheImplementation,
       authorizationParams: {
-        redirect_uri: window.location.origin,
+        redirect_uri: this.redirectURI,
         // scope: "openid profile email offline_access"
+        // audience
       },
     }).then((Auth0Client) => {
       this.isReady = true;
@@ -179,13 +207,11 @@ export class OthentAuth0Client {
   // Storage listeners:
 
   initStorageSyncing() {
-    if (this.localStorageKey) {
-      window.addEventListener("storage", this.handleStorage);
-    } else {
-      console.warn(
-        "Calling `Othent.init` is a NOOP unless the `localStorageKey` option is used.",
-      );
-    }
+    // TODO: Add alternative to sync using `BroadcastChannel` without persisting anything.
+
+    if (!this.localStorageKey) return;
+
+    window.addEventListener("storage", this.handleStorage);
   }
 
   stopStorageSyncing() {
@@ -446,24 +472,51 @@ export class OthentAuth0Client {
 
     // This can throw if the popup is close by the user or if we try to open it before the user interacts with the page.
     // In both cases, that's handled in the parent `Othent.connect()`:
-
-    await auth0Client.loginWithPopup({
-      authorizationParams: this.getAuthorizationParams({
-        redirect_uri: window.location.origin,
-        // TODO: This doesn't seem to change anything. It could be used to remember the last provider the user used.
-        // connection: "auth0",
-      }),
-
-      // TODO: Left this comment here for reference in case this becomes an issue in iOS:
-      /**
-       * Accepts an already-created popup window to use. If not specified, the SDK
-       * will create its own. This may be useful for platforms like iOS that have
-       * security restrictions around when popups can be invoked (e.g. from a user click event)
-       */
-      // { popup: <POPUP> }
+    const authorizationParams = this.getAuthorizationParams({
+      redirect_uri: this.redirectURI,
+      // TODO: This doesn't seem to change anything. It could be used to remember the last provider the user used.
+      // connection: "auth0",
     });
 
+    if (this.loginMethod === "popup") {
+      // See https://auth0.com/docs/libraries/auth0-single-page-app-sdk#login-with-popup
+      await auth0Client.loginWithPopup(
+        {
+          authorizationParams,
+        },
+        {
+          // { popup: <POPUP> } // This might be useful to provide an already-created popup in platforms like iOS.
+        },
+      );
+    } else {
+      // See https://auth0.com/docs/libraries/auth0-single-page-app-sdk#login-with-redirect
+      auth0Client.loginWithRedirect({
+        authorizationParams,
+        // openUrl(url) { }, // This might be useful to control the redirect in mobile platforms.
+      });
+
+      throw new Error("Redirecting...");
+    }
+
     return this.getTokenSilently();
+  }
+
+  async handleRedirectCallback(
+    callbackUrlWithParams: Auth0RedirectUriWithParams,
+  ) {
+    const auth0Client = await this.auth0ClientPromise;
+
+    if (!auth0Client) throw new Error("Missing Auth0 Client");
+
+    await auth0Client.handleRedirectCallback(callbackUrlWithParams);
+
+    // await this.getTokenSilently();
+
+    const idToken = await auth0Client.getUser<IdTokenWithData>();
+
+    if (!idToken) throw new Error("Could not get the user's details");
+
+    return this.updateUserDetails(idToken);
   }
 
   async logOut() {
@@ -476,13 +529,13 @@ export class OthentAuth0Client {
     return auth0Client
       .logout({
         logoutParams: {
-          returnTo: window.location.origin,
+          returnTo: this.returnToURI,
         },
       })
       .catch((err) => {
         console.warn(err instanceof Error ? err.message : err);
 
-        window.location.reload();
+        if (typeof location !== "undefined") location.reload();
       });
   }
 

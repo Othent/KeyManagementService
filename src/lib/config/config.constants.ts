@@ -6,8 +6,12 @@ import { UrlString } from "../utils/typescript/url.types";
 export const DEFAULT_OTHENT_CONFIG = {
   auth0Domain: "auth.othent.io",
   auth0ClientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
-  auth0Strategy: "refresh-memory",
+  auth0Strategy: "refresh-tokens",
+  auth0Cache: "memory",
   auth0RefreshTokenExpirationMs: 1296000000, // 2 weeks
+  auth0LogInMethod: "popup",
+  auth0RedirectURI: null,
+  auth0ReturnToURI: null,
   serverBaseURL: "https://kms-server.othent.io",
   autoConnect: "lazy",
   cookieKey: null,
@@ -18,10 +22,11 @@ export const DEFAULT_OTHENT_CONFIG = {
 
 export const DEFAULT_OTHENT_OPTIONS = {
   ...DEFAULT_OTHENT_CONFIG,
-  persistCookie: false,
-  persistLocalStorage: false,
   appName: "",
   appVersion: "",
+  persistCookie: false,
+  persistLocalStorage: false,
+  auth0Cache: "memory",
 } as const satisfies OthentOptions;
 
 export const DEFAULT_GATEWAY_CONFIG = {

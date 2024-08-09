@@ -48,7 +48,13 @@ import {
   TagData,
   UploadedTransactionData,
 } from "./othent.types";
-import { AppInfo, OthentConfig, OthentOptions } from "../config/config.types";
+import {
+  AppInfo,
+  Auth0RedirectUri,
+  Auth0RedirectUriWithParams,
+  OthentConfig,
+  OthentOptions,
+} from "../config/config.types";
 import { mergeOptions } from "../utils/options/options.utils";
 import ArweaveModule from "arweave";
 import {
@@ -116,12 +122,20 @@ export class Othent implements Omit<ArConnect, "connect"> {
     let {
       appName,
       appVersion,
-      initialUserDetails,
       persistCookie,
       persistLocalStorage,
+      auth0Cache,
+      auth0RedirectURI,
+      auth0ReturnToURI,
       gatewayConfig,
+      initialUserDetails,
       ...configOptions
     } = options;
+
+    const defaultRedirectURI =
+      typeof location === "undefined"
+        ? null
+        : (location.origin as Auth0RedirectUri);
 
     this.config = {
       ...mergeOptions<OthentConfig>(configOptions, DEFAULT_OTHENT_CONFIG),
@@ -137,20 +151,38 @@ export class Othent implements Omit<ArConnect, "connect"> {
           : persistLocalStorage
             ? DEFAULT_COOKIE_KEY
             : null,
+      auth0Cache: typeof auth0Cache === "object" ? "custom" : auth0Cache,
+      auth0RedirectURI: auth0RedirectURI || defaultRedirectURI,
+      auth0ReturnToURI: auth0ReturnToURI || defaultRedirectURI,
     };
 
-    const { cookieKey, localStorageKey } = this.config;
+    const { config } = this;
+    const { cookieKey, localStorageKey } = config;
 
     if (typeof cookieKey === "string" && !cookieKey.startsWith("othent")) {
-      throw new Error('`cookieKey` must start with "othent".');
+      throw new Error(
+        '`persistCookie` / `cookieKey` must start with "othent".',
+      );
     }
 
     if (
       typeof localStorageKey === "string" &&
       !localStorageKey.startsWith("othent")
     ) {
-      throw new Error('`cookieKey` must start with "othent".');
+      throw new Error(
+        '`persistLocalStorage` / `localStorageKey` must start with "othent".',
+      );
     }
+
+    if (!config.auth0RedirectURI) {
+      throw new Error("`auth0RedirectURI` is required.");
+    }
+
+    if (!config.auth0ReturnToURI) {
+      throw new Error("`auth0ReturnToURI` is required.");
+    }
+
+    // TODO: Using localStorageKey only makes sense with in-memory refresh tokens. Show warning, it might or might not.
 
     this.appInfo = {
       name: appName,
@@ -173,14 +205,14 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     this.crypto = crypto;
 
-    const { config } = this;
-
     if (
       config.autoConnect === "eager" &&
-      config.auth0Strategy === "refresh-memory"
+      config.auth0LogInMethod === "popup" &&
+      config.auth0Strategy === "refresh-tokens" &&
+      options.auth0Cache === "memory"
     ) {
       throw new Error(
-        'In-memory refresh tokens cannot be used with `autoConnect = "eager"`. Use `autoConnect = "lazy"` instead',
+        'The browser cannot open the authentication modal automatically before an user interaction. Use `autoConnect = "lazy"` or change any of these other options: `auth0LogInMethod`, `auth0Strategy` or `auth0Cache`.',
       );
     }
 
@@ -188,15 +220,31 @@ export class Othent implements Omit<ArConnect, "connect"> {
       domain: config.auth0Domain,
       clientId: config.auth0ClientId,
       strategy: config.auth0Strategy,
-      cookieKey: config.cookieKey,
-      localStorageKey: config.localStorageKey,
+      cache: options.auth0Cache,
       refreshTokenExpirationMs: config.auth0RefreshTokenExpirationMs,
+      redirectURI: config.auth0RedirectURI,
+      returnToURI: config.auth0ReturnToURI,
+      loginMethod: config.auth0LogInMethod,
       appInfo: this.appInfo,
       initialUserDetails,
+      cookieKey: config.cookieKey,
+      localStorageKey: config.localStorageKey,
     });
 
     if (this.config.autoConnect === "eager") {
-      this.connect();
+      let shouldAutoConnect = typeof location === "undefined";
+
+      if (!shouldAutoConnect) {
+        const url = new URL(location.href);
+        const { searchParams } = url;
+
+        // If we just got redirected to Auth0's callback URL, do not try to connect again:
+        if (!searchParams.has("code") && !searchParams.has("state")) {
+          shouldAutoConnect = true;
+        }
+      }
+
+      if (shouldAutoConnect) this.connect();
     }
 
     if (config.inject) {
@@ -268,13 +316,65 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @returns A cleanup function that must be called whenever Othent needs to stop listening for `storage` events (e.g.
    * to be used in React's `useEffects`'s cleanup function).
    */
-  init() {
+  startTabSynching() {
+    if (!this.config.localStorageKey) {
+      console.warn(
+        "Calling `Othent.startTabSynching()` is a NOOP unless the `persistLocalStorage` option is used.",
+      );
+    }
+
     this.auth0.initStorageSyncing();
 
     return () => {
-      // TODO: Add an option to clear localStorage if we only want it to sync tabs or add a new option to do that onunload?
       this.auth0.stopStorageSyncing();
     };
+  }
+
+  /**
+   *
+   * @param callbackUriWithParams
+   * @returns
+   */
+  async completeConnectionAfterRedirect(
+    callbackUriWithParams?: Auth0RedirectUriWithParams,
+  ): Promise<UserDetails | null> {
+    if (this.config.auth0LogInMethod !== "redirect") {
+      console.warn(
+        'Calling `Othent.completeConnectionAfterRedirect()` is a NOOP unless the `auth0LogInMethod` options is `"redirect"`.',
+      );
+    }
+
+    // We default to the current URL, if we are in a browser:
+    const urlString =
+      callbackUriWithParams ||
+      (typeof location === "undefined"
+        ? ""
+        : (location.href as Auth0RedirectUriWithParams));
+
+    // If this is a mobile app URI, we need to turn it into an URL before passing it to the `URL` constructor (just to parse the params):
+    const urlObject = new URL(urlString.replace(/.+\.auth0:\/\//, "https://"));
+
+    const { searchParams } = urlObject;
+
+    // If this function is called but there are no `code` and `state` params available, this is a NOOP:
+    if (!searchParams.has("code") || !searchParams.has("state") || !urlString)
+      return null;
+
+    let userDetails: UserDetails | null = null;
+
+    try {
+      userDetails = await this.auth0.handleRedirectCallback(urlString);
+    } finally {
+      if (typeof location !== "undefined" && typeof history !== "undefined") {
+        searchParams.delete("code");
+        searchParams.delete("state");
+
+        // If we are in a browser, remove the `code` and `state` params from the URL:
+        history.replaceState(null, "", urlObject);
+      }
+    }
+
+    return userDetails;
   }
 
   /**
@@ -481,7 +581,13 @@ export class Othent implements Omit<ArConnect, "connect"> {
         id_token = response.id_token;
         userDetails = response.userDetails;
       } catch (err) {
-        // However, there are 2 common scenarios where `logIn()` will throw an error:
+        if (!(err instanceof Error)) throw err;
+
+        // This call to `connect()` will never "finish". We just "await" here indefinitely while the browser navigates
+        // to Auth0's authentication page.
+        if (err.message === "Redirecting...") await new Promise(() => {});
+
+        // There are 3 other common scenarios where `logIn()` will throw an error:
         //
         // - When calling `connect()` before the user interacts with the page (e.g. clicks on a button). This happens
         //   because we use `connect()` both when the user clicks in a "Log In" / "Connect" button, but also to
@@ -489,19 +595,23 @@ export class Othent implements Omit<ArConnect, "connect"> {
         //
         // - When the user closes the authentication popup without authenticating.
         //
-        // In both cases, we just log the errors and return null; any other error, we throw.
-
-        if (!(err instanceof Error)) throw err;
+        // - When the user takes too long (> 60 seconds) to authenticate.
+        //
+        // In all these cases, we just log the errors and return null; any other error, we throw.
 
         if (
+          err.message.startsWith("Unable to open a popup") ||
           err instanceof PopupCancelledError ||
-          err instanceof PopupTimeoutError ||
-          err.message.startsWith("Unable to open a popup")
+          err instanceof PopupTimeoutError
         ) {
+          if (err instanceof PopupTimeoutError) err.popup.close();
+
           console.warn(err.message);
 
           return null;
         }
+
+        throw err;
       }
     }
 

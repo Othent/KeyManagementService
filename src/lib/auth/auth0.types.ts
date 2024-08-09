@@ -7,6 +7,9 @@ import type { JwtPayload } from "jwt-decode";
 import { RemoveIndexSignature } from "../utils/typescript/type-utils.types";
 import {
   AppInfo,
+  Auth0Cache,
+  Auth0LogInMethod,
+  Auth0RedirectUri,
   Auth0Strategy,
   OthentStorageKey,
 } from "../config/config.types";
@@ -17,7 +20,11 @@ export interface OthentAuth0ClientOptions {
   domain: string;
   clientId: string;
   strategy: Auth0Strategy;
+  cache: Auth0Cache;
   refreshTokenExpirationMs: number;
+  loginMethod: Auth0LogInMethod;
+  redirectURI: Auth0RedirectUri;
+  returnToURI: Auth0RedirectUri;
   appInfo: AppInfo;
   initialUserDetails?: UserDetails | null;
   cookieKey: OthentStorageKey | null;
