@@ -25,11 +25,18 @@ export type AutoConnect = "eager" | "lazy" | "off";
 
 export interface OthentConfig {
   /**
+   * Enable additional logs.
+   *
+   * @defaultValue `false`
+   */
+  debug: boolean;
+
+  /**
    * Inject Othent's instance as `window.arweaveWallet` so that `arweave-js` can use it on the background.
    *
    * @defaultValue `false`
    */
-  inject?: boolean;
+  inject: boolean;
 
   /**
    * API base URL. Needed if you are using a private/self-hosted API and Auth0 tenant.
@@ -201,7 +208,7 @@ export interface OthentOptions
    *
    * @defaultValue `false`
    */
-  persistCookie: boolean | OthentStorageKey;
+  persistCookie?: boolean | OthentStorageKey;
 
   /**
    * Set this to `true` or the name of the `localStorage` item where you'd like the user details JSON to be stored.
@@ -211,7 +218,7 @@ export interface OthentOptions
    *
    * @defaultValue `false`
    */
-  persistLocalStorage: boolean | OthentStorageKey;
+  persistLocalStorage?: boolean | OthentStorageKey;
 
   /**
    * Gateway config to connect to Arweave.
@@ -242,7 +249,7 @@ export interface OthentOptions
    *
    * @defaultValue `memory`
    */
-  auth0Cache: Auth0Cache;
+  auth0Cache?: Auth0Cache;
 }
 
 export interface AppInfo {

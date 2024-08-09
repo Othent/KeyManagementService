@@ -48,6 +48,8 @@ export class OthentAuth0Client {
     github: "GitHub",
   };
 
+  private debug = false;
+
   private loginMethod: Auth0LogInMethod;
 
   private redirectURI: Auth0RedirectUri;
@@ -136,6 +138,7 @@ export class OthentAuth0Client {
   }
 
   constructor({
+    debug,
     domain,
     clientId,
     strategy,
@@ -149,12 +152,7 @@ export class OthentAuth0Client {
     cookieKey,
     localStorageKey,
   }: OthentAuth0ClientOptions) {
-    const useRefreshTokens = strategy === "refresh-tokens";
-    const cacheLocation: CacheLocation | undefined =
-      typeof cache === "string" ? cache : undefined;
-    const cacheImplementation: ICache | undefined =
-      typeof cache === "object" ? cache : undefined;
-
+    this.debug = debug;
     this.loginMethod = loginMethod;
     this.redirectURI = redirectURI;
     this.returnToURI = returnToURI;
@@ -162,9 +160,9 @@ export class OthentAuth0Client {
     this.auth0ClientPromise = createAuth0Client({
       domain,
       clientId,
-      useRefreshTokens,
-      cacheLocation,
-      cache: cacheImplementation,
+      useRefreshTokens: strategy === "refresh-tokens",
+      cacheLocation: typeof cache === "string" ? cache : undefined,
+      cache: typeof cache === "object" ? cache : undefined,
       authorizationParams: {
         redirect_uri: this.redirectURI,
         // scope: "openid profile email offline_access"
@@ -406,7 +404,7 @@ export class OthentAuth0Client {
 
     const authorizationParams = this.getAuthorizationParams(data);
 
-    if (process.env.NODE_ENV === "development") {
+    if (this.debug) {
       try {
         console.log("getTokenSilently() =", {
           ...authorizationParams,
@@ -457,7 +455,7 @@ export class OthentAuth0Client {
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");
 
-    if (process.env.NODE_ENV === "development") console.log("logIn()");
+    if (this.debug) console.log("logIn()");
 
     const isAuthenticated = await auth0Client.isAuthenticated();
 
@@ -499,6 +497,9 @@ export class OthentAuth0Client {
   async handleRedirectCallback(
     callbackUrlWithParams: Auth0RedirectUriWithParams,
   ) {
+    if (this.debug)
+      console.log(`handleRedirectCallback(${callbackUrlWithParams})`);
+
     const auth0Client = await this.auth0ClientPromise;
 
     if (!auth0Client) throw new Error("Missing Auth0 Client");

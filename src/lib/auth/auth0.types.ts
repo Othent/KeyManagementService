@@ -17,6 +17,7 @@ import {
 // OthentAuth0Client:
 
 export interface OthentAuth0ClientOptions {
+  debug: boolean;
   domain: string;
   clientId: string;
   strategy: Auth0Strategy;

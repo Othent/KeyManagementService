@@ -124,7 +124,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       appVersion,
       persistCookie,
       persistLocalStorage,
-      auth0Cache,
+      auth0Cache = DEFAULT_OTHENT_CONFIG.auth0Cache,
       auth0RedirectURI,
       auth0ReturnToURI,
       gatewayConfig,
@@ -209,7 +209,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       config.autoConnect === "eager" &&
       config.auth0LogInMethod === "popup" &&
       config.auth0Strategy === "refresh-tokens" &&
-      options.auth0Cache === "memory"
+      auth0Cache === "memory"
     ) {
       throw new Error(
         'The browser cannot open the authentication modal automatically before an user interaction. Use `autoConnect = "lazy"` or change any of these other options: `auth0LogInMethod`, `auth0Strategy` or `auth0Cache`.',
@@ -217,10 +217,11 @@ export class Othent implements Omit<ArConnect, "connect"> {
     }
 
     this.auth0 = new OthentAuth0Client({
+      debug: config.debug,
       domain: config.auth0Domain,
       clientId: config.auth0ClientId,
       strategy: config.auth0Strategy,
-      cache: options.auth0Cache,
+      cache: auth0Cache,
       refreshTokenExpirationMs: config.auth0RefreshTokenExpirationMs,
       redirectURI: config.auth0RedirectURI,
       returnToURI: config.auth0ReturnToURI,

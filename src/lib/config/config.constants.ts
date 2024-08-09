@@ -4,6 +4,8 @@ import { OthentConfig, OthentOptions, OthentStorageKey } from "./config.types";
 import { UrlString } from "../utils/typescript/url.types";
 
 export const DEFAULT_OTHENT_CONFIG = {
+  debug: false,
+  inject: false,
   auth0Domain: "auth.othent.io",
   auth0ClientId: "uXkRmJoIa0NfzYgYEDAgj6Rss4wR1tIc",
   auth0Strategy: "refresh-tokens",
