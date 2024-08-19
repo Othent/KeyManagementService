@@ -5,6 +5,7 @@ import { parseErrorResponse } from "../../utils/errors/error.utils";
 import {
   BinaryDataType,
   binaryDataTypeToString,
+  stringToUint8Array,
 } from "../../utils/arweaveUtils";
 
 // New format:
@@ -20,7 +21,7 @@ export async function decrypt(
   auth0: OthentAuth0Client,
   ciphertext: string | BinaryDataType,
   keyName: string,
-): Promise<string> {
+): Promise<Uint8Array> {
   // TODO: `ciphertext` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
   const encodedData = await auth0.encodeToken({ ciphertext, keyName });
 
@@ -41,6 +42,6 @@ export async function decrypt(
   }
 
   return typeof plaintext === "string"
-    ? plaintext
-    : binaryDataTypeToString(new Uint8Array(plaintext.data));
+    ? stringToUint8Array(plaintext)
+    : new Uint8Array(plaintext.data);
 }

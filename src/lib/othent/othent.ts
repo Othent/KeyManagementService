@@ -249,7 +249,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
     }
 
     if (config.inject) {
-      window.arweaveWallet = this as unknown as ArConnect;
+      // TODO: This will work fine as soon as ArConnect also updates their types to match their docs. Those changes have
+      // already been added to `arconnect.types.ts`:
+      // window.arweaveWallet = this as unknown as ArConnect;
+      window.arweaveWallet = this as any;
     }
 
     if (!config.throwErrors) {
@@ -975,13 +978,12 @@ export class Othent implements Omit<ArConnect, "connect"> {
    *
    * @returns The decrypted data.
    */
-  async decrypt(ciphertext: BinaryDataType): Promise<string> {
+  async decrypt(ciphertext: BinaryDataType): Promise<Uint8Array> {
     const { sub } = await this.requireUserDataOrThrow();
 
-    const plaintext = await this.api.decrypt(ciphertext, sub);
+    const plaintextBuffer = await this.api.decrypt(ciphertext, sub);
 
-    // TODO: The return type should probably be binary as well:
-    return plaintext;
+    return plaintextBuffer;
   }
 
   // SIGN:
@@ -1013,8 +1015,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     const { data, tags, ...options } = dataItem;
 
+    // TODO: Remove commented out debugging code here:
+
     const signer: Signer = {
-      publicKey: toBuffer(publicKey), // => Buffer.from(toBase64(base64url), "base64");
+      publicKey: toBuffer(publicKey),
       // publicKey: Buffer.from(publicKey, "base64"),
       signatureType: 1,
       signatureLength: 512,

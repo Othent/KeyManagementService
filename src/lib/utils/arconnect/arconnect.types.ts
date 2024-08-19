@@ -2,6 +2,7 @@
 
 import type { SignatureOptions } from "arweave/node/lib/crypto/crypto-interface";
 import type Transaction from "arweave/node/lib/transaction";
+import { BinaryDataType } from "../arweaveUtils";
 
 export abstract class ArConnect {
   /**
@@ -82,13 +83,8 @@ export abstract class ArConnect {
    * @returns Promise of the encrypted string
    */
   abstract encrypt(
-    data: string,
-    // TODO: In the docs this has a single property called `name`. See https://docs.arconnect.io/api/encrypt.
-    options: {
-      algorithm: string;
-      hash: string;
-      salt?: string;
-    },
+    data: BinaryDataType,
+    options?: RsaOaepParams | AesCtrParams | AesCbcParams | AesGcmParams,
   ): Promise<Uint8Array>;
 
   /**
@@ -100,27 +96,16 @@ export abstract class ArConnect {
    * @returns Promise of the decrypted string
    */
   abstract decrypt(
-    data: Uint8Array,
-    // TODO: In the docs this has a single property called `name`. See https://docs.arconnect.io/api/encrypt.
-    options: {
-      algorithm: string;
-      hash: string;
-      salt?: string;
-    },
-  ) // TODO: Wrong? Should this return a Uint8Array? From ArConnect's docs/examples, that seems to be the case, but types
-  // are wrong.
-  : Promise<string>;
+    data: BinaryDataType,
+    options?: RsaOaepParams | AesCtrParams | AesCbcParams | AesGcmParams,
+  ): Promise<Uint8Array>;
 
   /**
    * Get the user's custom Arweave config set in the extension
    *
    * @returns Promise of the user's Arweave config
    */
-  abstract getArweaveConfig(): Promise<{
-    host: string;
-    port: number;
-    protocol: "http" | "https";
-  }>;
+  abstract getArweaveConfig(): Promise<GatewayConfig>;
 
   /**
    * @deprecated Find alternatives at https://docs.arconnect.io/api/signature
@@ -128,7 +113,11 @@ export abstract class ArConnect {
   abstract signature(
     data: Uint8Array,
     // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/sign#parameters
-    algorithm: AlgorithmIdentifier | RsaPssParams | EcdsaParams,
+    algorithm?:
+      | RsaPssParams
+      | EcdsaParams
+      | { name: "RSASSA-PKCS1-v1_5" }
+      | { name: "HMAC" },
   ): Promise<Uint8Array>;
 
   /**
