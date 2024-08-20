@@ -112,16 +112,11 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   gatewayConfig: GatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
-  // TODO: Add B64 / B64Encoded support (e.g. option on encrypt to return B64Encoded, make decrypt accept a B64 input, make all signature functions return B64Encoded results...)
-
-  // TODO: Consider moving some of the dependencies to peer dependencies (arweave, axios, warp-arbundles)
-
-  // TODO: Expose Auth0 client and/or accessToken for developers to use on their own backend?
-
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     let {
       appName,
       appVersion,
+      appLogo,
       persistCookie,
       persistLocalStorage,
       auth0Cache = DEFAULT_OTHENT_CONFIG.auth0Cache,
@@ -187,6 +182,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     this.appInfo = {
       name: appName,
       version: appVersion,
+      logo: appLogo,
     };
 
     this.gatewayConfig = gatewayConfig || DEFAULT_GATEWAY_CONFIG;
@@ -987,8 +983,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
   }
 
   // SIGN:
-
-  // TODO: Add deprecation warning (and update all TSDocs according to what's on ArConnect and add references to their docs).
 
   /**
    * Generate a signature. This function assumes (and requires) a user is authenticated.

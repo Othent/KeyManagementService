@@ -201,6 +201,11 @@ export interface OthentOptions
   appVersion: string;
 
   /**
+   * Image with the logo of your app. Optional and not used for now.
+   */
+  appLogo?: UrlString;
+
+  /**
    * Set this to `true` or the name of the cookie where you'd like the user details JSON to be stored.
    *
    * Note setting thisoption to `true` will set the cookie on the client / frontend, but it won't recover it on the
@@ -255,4 +260,6 @@ export interface OthentOptions
 export interface AppInfo {
   name: string;
   version: string;
+  // TODO: Add this to constructor and add nested props for appInfo, gateway and auth0?
+  logo?: string;
 }

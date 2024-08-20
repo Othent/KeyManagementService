@@ -90,19 +90,76 @@ export type OthentWalletAddressLabel = Auth0WalletAddressLabel | ANSDomain;
 
 export interface UserDetails {
   // Default from Auth0's User:
+
+  /**
+   * ID of the user's Auth0 account.
+   */
   sub: Auth0Sub;
+
+  /**
+   * The full name of the connected user created by the concatenation of the `givenName` and `familyName`.
+   */
   name: string;
+
+  /**
+   * The first name associated with the connected user.
+   */
   givenName: string;
+
+  /**
+   * The middle name or surname associated with the connected user.
+   */
   middleName: string;
+
+  /**
+   * The last name or surname associated with the connected user.
+   */
   familyName: string;
+
+  /**
+   * A less formal nickname for the connected user.
+   */
   nickname: string;
+
+  /**
+   * The preferred username for the connected user.
+   */
   preferredUsername: string;
+
+  /**
+   * ???
+   */
   profile: string;
+
+  /**
+   * The image URL of the profile picture of the connected user account.
+   */
   picture: string;
+
+  /**
+   * Website associated to the connected user, if any.
+   */
   website: string;
+
+  /**
+   * Locale of the connected user.
+   */
   locale: string;
+
+  /**
+   * Date when the connected user was last updated.
+   */
   updatedAt: string;
+
+  /**
+   * The connected user’s email address.
+   */
   email: string;
+
+  /**
+   * This field is set to `true` when the user successfully verifies their email address by clicking a verification
+   * link sent to their email.
+   */
   emailVerified: boolean;
 
   // Default but unused from Auth0's User:
@@ -114,10 +171,32 @@ export interface UserDetails {
   // address: string;
 
   // Custom from Auth0's Add User Metadata action:
-  owner: B64UrlString; // Public key derived from `sub`.
-  walletAddress: B64UrlString; // Wallet address derived from `owner`.
+
+  /**
+   * Every user account has an associated Arweave wallet. This is the public key of the associated Arweave wallet,
+   * derived from `sub`.
+   */
+  owner: B64UrlString;
+
+  /**
+   * Every user account has an associated Arweave wallet. This is the wallet address of the associated Arweave wallet,
+   * derived from `owner`,
+   */
+  walletAddress: B64UrlString;
+
+  /**
+   * The wallet address label. This is either coming from ANS or `"{Auth0Provider} ({email})"`.
+   */
   walletAddressLabel: OthentWalletAddressLabel;
+
+  /**
+   * The authentication protocol used (this will always be "KMS").
+   */
   authSystem: "KMS";
+
+  /**
+   * The authentication provider (social network, platform...) that was used to sign in.
+   */
   authProvider: Auth0Provider;
 }
 
