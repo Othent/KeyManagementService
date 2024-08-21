@@ -128,20 +128,6 @@ export interface OthentConfig {
   auth0ReturnToURI: Auth0RedirectUri | null;
 
   /**
-   * Name of the cookie where the user details JSON will be stored.
-   *
-   * @defaultValue `null`
-   */
-  cookieKey: OthentStorageKey | null;
-
-  /**
-   * Name of the `localStorage` item where the user details JSON will be stored.
-   *
-   * @defaultValue `null`
-   */
-  localStorageKey: OthentStorageKey | null;
-
-  /**
    * Refresh token expiration in milliseconds. This should/must match the value set in Auth0. On the client, this value
    * is only used to set a timer to automatically log out users when their refresh token expires. Incorrectly setting
    * this value will make users think they are still logged in, even after their refresh token expires (until they try
@@ -182,28 +168,32 @@ export interface OthentConfig {
    * @defaultValue `[]`
    */
   tags: TagData[];
+
+  /**
+   * Name of the cookie where the user details JSON will be stored.
+   *
+   * @defaultValue `null`
+   */
+  cookieKey: OthentStorageKey | null;
+
+  /**
+   * Name of the `localStorage` item where the user details JSON will be stored.
+   *
+   * @defaultValue `null`
+   */
+  localStorageKey: OthentStorageKey | null;
 }
 
 export interface OthentOptions
   extends Partial<
     Omit<OthentConfig, "cookieKey" | "localStorageKey" | "auth0Cache">
   > {
-  /**
-   * Name of your app. This will add a tag `App-Name: <appName>` to any transaction signed or sent using `Othent.sign`,
-   * `Othent.dispatch` or `Othent.signDataItem`.
-   */
-  appName: string;
+  appInfo: AppInfo;
 
   /**
-   * Version of your app. This will add a tag `App-Version: <appVersion>` to any transaction signed or sent using
-   * `Othent.sign`, `Othent.dispatch` or `Othent.signDataItem`.
+   * Gateway config to connect to Arweave.
    */
-  appVersion: string;
-
-  /**
-   * Image with the logo of your app. Optional and not used for now.
-   */
-  appLogo?: UrlString;
+  gatewayConfig?: GatewayConfig;
 
   /**
    * Set this to `true` or the name of the cookie where you'd like the user details JSON to be stored.
@@ -224,11 +214,6 @@ export interface OthentOptions
    * @defaultValue `false`
    */
   persistLocalStorage?: boolean | OthentStorageKey;
-
-  /**
-   * Gateway config to connect to Arweave.
-   */
-  gatewayConfig?: GatewayConfig;
 
   /**
    * Initial user details. Useful for server-side rendered sites or native apps that might store the most recent user
@@ -258,8 +243,30 @@ export interface OthentOptions
 }
 
 export interface AppInfo {
+  /**
+   * Name of your app. This will add a tag `App-Name: <appName>` to any transaction signed or sent using `Othent.sign`,
+   * `Othent.dispatch` or `Othent.signDataItem`.
+   */
   name: string;
+
+  /**
+   * Version of your app. This will add a tag `App-Version: <appVersion>` to any transaction signed or sent using
+   * `Othent.sign`, `Othent.dispatch` or `Othent.signDataItem`.
+   */
   version: string;
-  // TODO: Add this to constructor and add nested props for appInfo, gateway and auth0?
-  logo?: string;
+
+  /**
+   * Environment your app is currently running on (e.g. "development", "staging", "production", ...). This will add a
+   * tag `App-Env: <appEnv>` to any transaction signed or sent using `Othent.sign`, `Othent.dispatch` or
+   * `Othent.signDataItem`.
+   *
+   * If no value (empty `string`) is provided, this will automatically be set to `"development"` if
+   * `location.hostname = "localhost"` or `"production"` otherwise.
+   */
+  env: string;
+
+  /**
+   * Image with the logo of your app. Optional and not used for now.
+   */
+  logo?: UrlString;
 }

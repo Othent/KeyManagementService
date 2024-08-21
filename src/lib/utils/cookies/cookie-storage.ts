@@ -156,8 +156,6 @@ export class CookieStorage implements Storage {
       console.info(`${actionLabel} cookie ${key}=<VALUE>;${cookieParams}`);
     }
 
-    // TODO: Warning or throw if not secure.
-
     const cookieStr =
       `${key}=${serializedValue};${cookieParams}` as const satisfies CookieStr;
 

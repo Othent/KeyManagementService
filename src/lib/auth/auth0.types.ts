@@ -241,6 +241,7 @@ export interface TransactionInput {
   // For App-related analytics:
   appName: string;
   appVersion: string;
+  appEnv: string;
 
   // Operation data:
   data?: CryptoOperationData;

@@ -21,6 +21,7 @@ import {
 import {
   CLIENT_NAME,
   CLIENT_VERSION,
+  DEFAULT_APP_INFO,
   DEFAULT_OTHENT_CONFIG,
 } from "../config/config.constants";
 import { EventListenersHandler } from "../utils/events/event-listener-handler";
@@ -75,10 +76,7 @@ export class OthentAuth0Client {
   private refreshTokenExpirationMs =
     +DEFAULT_OTHENT_CONFIG.auth0RefreshTokenExpirationMs;
 
-  private appInfo: AppInfo = {
-    name: "",
-    version: "",
-  };
+  private appInfo: AppInfo = DEFAULT_APP_INFO;
 
   isReady = false;
 
@@ -143,10 +141,10 @@ export class OthentAuth0Client {
     clientId,
     strategy,
     cache,
-    refreshTokenExpirationMs,
     loginMethod,
     redirectURI,
     returnToURI,
+    refreshTokenExpirationMs,
     appInfo,
     initialUserDetails,
     cookieKey,
@@ -377,12 +375,15 @@ export class OthentAuth0Client {
           };
     };
 
+    const { appInfo } = this;
+
     const transactionInput: TransactionInput = {
       othentFunction: "KMS",
       othentSDKVersion: CLIENT_NAME,
       othentAPIVersion: CLIENT_VERSION,
-      appName: this.appInfo.name,
-      appVersion: this.appInfo.version,
+      appName: appInfo.name,
+      appVersion: appInfo.version,
+      appEnv: appInfo.env,
     };
 
     if (data) {

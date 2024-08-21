@@ -19,6 +19,7 @@ import {
   ANALYTICS_TAGS,
   CLIENT_NAME,
   CLIENT_VERSION,
+  DEFAULT_APP_INFO,
   DEFAULT_COOKIE_KEY,
   DEFAULT_DISPATCH_NODE,
   DEFAULT_GATEWAY_CONFIG,
@@ -105,25 +106,38 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   config: OthentConfig = DEFAULT_OTHENT_CONFIG;
 
-  appInfo: AppInfo = {
-    name: "",
-    version: "",
-  };
+  appInfo: AppInfo = DEFAULT_APP_INFO;
 
   gatewayConfig: GatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
+    // Crypto validation:
+
+    let crypto: Crypto | null = null;
+
+    if (typeof window !== "undefined") {
+      crypto = window.crypto;
+    } else if (typeof global !== "undefined") {
+      crypto = global.crypto;
+    } else {
+      throw new Error(
+        "A Crypto module is needed for Othent to work. If your environment doesn't natively provide one, you should polyfill it.",
+      );
+    }
+
+    this.crypto = crypto;
+
+    // Merge default options:
+
     let {
-      appName,
-      appVersion,
-      appLogo,
+      appInfo,
+      gatewayConfig,
       persistCookie,
       persistLocalStorage,
+      initialUserDetails,
       auth0Cache = DEFAULT_OTHENT_CONFIG.auth0Cache,
       auth0RedirectURI,
       auth0ReturnToURI,
-      gatewayConfig,
-      initialUserDetails,
       ...configOptions
     } = options;
 
@@ -151,6 +165,17 @@ export class Othent implements Omit<ArConnect, "connect"> {
       auth0ReturnToURI: auth0ReturnToURI || defaultRedirectURI,
     };
 
+    // AppInfo & Gateway configs:
+
+    this.appInfo = {
+      ...appInfo,
+      env: appInfo.env || DEFAULT_APP_INFO.env,
+    };
+
+    this.gatewayConfig = gatewayConfig || DEFAULT_GATEWAY_CONFIG;
+
+    // Cookie and localStorage persistance (validation):
+
     const { config } = this;
     const { cookieKey, localStorageKey } = config;
 
@@ -169,6 +194,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
       );
     }
 
+    // Auth0 options validation:
+
     if (!config.auth0RedirectURI) {
       throw new Error("`auth0RedirectURI` is required.");
     }
@@ -176,30 +203,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
     if (!config.auth0ReturnToURI) {
       throw new Error("`auth0ReturnToURI` is required.");
     }
-
-    // TODO: Using localStorageKey only makes sense with in-memory refresh tokens. Show warning, it might or might not.
-
-    this.appInfo = {
-      name: appName,
-      version: appVersion,
-      logo: appLogo,
-    };
-
-    this.gatewayConfig = gatewayConfig || DEFAULT_GATEWAY_CONFIG;
-
-    let crypto: Crypto | null = null;
-
-    if (typeof window !== "undefined") {
-      crypto = window.crypto;
-    } else if (typeof global !== "undefined") {
-      crypto = global.crypto;
-    } else {
-      throw new Error(
-        "A Crypto module is needed for Othent to work. If your environment doesn't natively provide one, you should polyfill it.",
-      );
-    }
-
-    this.crypto = crypto;
 
     if (
       config.autoConnect === "eager" &&
@@ -212,37 +215,42 @@ export class Othent implements Omit<ArConnect, "connect"> {
       );
     }
 
+    // (Othent's) Auth0 Client:
+
     this.auth0 = new OthentAuth0Client({
       debug: config.debug,
       domain: config.auth0Domain,
       clientId: config.auth0ClientId,
       strategy: config.auth0Strategy,
       cache: auth0Cache,
-      refreshTokenExpirationMs: config.auth0RefreshTokenExpirationMs,
+      loginMethod: config.auth0LogInMethod,
       redirectURI: config.auth0RedirectURI,
       returnToURI: config.auth0ReturnToURI,
-      loginMethod: config.auth0LogInMethod,
+      refreshTokenExpirationMs: config.auth0RefreshTokenExpirationMs,
       appInfo: this.appInfo,
       initialUserDetails,
       cookieKey: config.cookieKey,
       localStorageKey: config.localStorageKey,
     });
 
-    if (this.config.autoConnect === "eager") {
-      let shouldAutoConnect = typeof location === "undefined";
+    // Auto-connect:
 
-      if (!shouldAutoConnect) {
+    if (config.autoConnect === "eager") {
+      if (typeof location === "undefined") {
+        this.connect();
+      } else {
         const url = new URL(location.href);
         const { searchParams } = url;
 
-        // If we just got redirected to Auth0's callback URL, do not try to connect again:
+        // If we just got redirected to Auth0's callback URL, do not try to connect again, as
+        // `completeConnectionAfterRedirect()` needs to be called.
         if (!searchParams.has("code") && !searchParams.has("state")) {
-          shouldAutoConnect = true;
+          this.connect();
         }
       }
-
-      if (shouldAutoConnect) this.connect();
     }
+
+    // Inject wallet in `window`:
 
     if (config.inject) {
       // TODO: This will work fine as soon as ArConnect also updates their types to match their docs. Those changes have
@@ -250,6 +258,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
       // window.arweaveWallet = this as unknown as ArConnect;
       window.arweaveWallet = this as any;
     }
+
+    // Error handling:
 
     if (!config.throwErrors) {
       const walletMethods = [
@@ -780,10 +790,13 @@ export class Othent implements Omit<ArConnect, "connect"> {
   private addCommonTags(tags?: TagData[]): TagData[];
   private addCommonTags(transaction: Transaction): void;
   private addCommonTags(transactionOrTags: TagData[] | Transaction = []) {
+    const { appInfo } = this;
+
     if (Array.isArray(transactionOrTags)) {
       const appInfoTags: TagData[] = [
-        { name: "App-Name", value: this.appInfo.name },
-        { name: "App-Version", value: this.appInfo.version },
+        { name: "App-Name", value: appInfo.name },
+        { name: "App-Version", value: appInfo.version },
+        { name: "App-Env", value: appInfo.env },
       ];
 
       return [
@@ -798,8 +811,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
       transactionOrTags.addTag(name, value);
     }
 
-    transactionOrTags.addTag("App-Name", this.appInfo.name);
-    transactionOrTags.addTag("App-Version", this.appInfo.version);
+    transactionOrTags.addTag("App-Name", appInfo.name);
+    transactionOrTags.addTag("App-Version", appInfo.version);
+    transactionOrTags.addTag("App-Env", appInfo.env);
 
     for (const { name, value } of ANALYTICS_TAGS) {
       transactionOrTags.addTag(name, value);
@@ -1005,15 +1019,16 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @returns The signed data item.
    */
   async signDataItem(dataItem: DataItem): Promise<ArrayBufferLike> {
+    // TODO: DateItem.verify won't work when loading the returned value into it.
+    // TODO: Install `warp-bundles` and try to see what's going on here.
+    // TODO: Check if this is working in ArConnect: https://github.com/arconnectio/ArConnect/blob/production/src/api/modules/sign_data_item/sign_data_item.background.ts
+
     const { sub, publicKey } = await this.requireUserDataOrThrow();
 
     const { data, tags, ...options } = dataItem;
 
-    // TODO: Remove commented out debugging code here:
-
     const signer: Signer = {
       publicKey: toBuffer(publicKey),
-      // publicKey: Buffer.from(publicKey, "base64"),
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
@@ -1022,50 +1037,15 @@ export class Othent implements Omit<ArConnect, "connect"> {
       // verify: () => true,
     };
 
-    // @ts-ignore
-    // const signer2: Signer = {
-    //   publicKey: toBuffer(publicKey),
-    //   // publicKey: Buffer.from(publicKey, "base64"),
-    //   signatureType: 1,
-    //   signatureLength: 512,
-    //   ownerLength: 512,
-    //   // sign: this.api.getSignerSignFn(sub),
-    //   // Note we don't provide `verify` as it's not used anyway:
-    //   // verify: null,
-    // };
-
     const opts: DataItemCreateOptions = {
       ...options,
       tags: this.addCommonTags(tags),
     };
 
-    // TODO: git clone warp-bundles and try to see what's going on here...:
-    // TODO: This is wrong in https://github.com/arconnectio/ArConnect/blob/production/src/api/modules/sign_data_item/sign_data_item.background.ts
-    // const dataItemInstance = createData(typeof data === 'string' ? new Uint8Array(data) : data, signer, opts);
     const dataItemInstance = createData(data, signer, opts);
-    // const dataItemInstance2 = createData(data, signer2, opts);
-
-    // const dataToSign2 = await dataItemInstance.getSignatureData(); // .sign() uses this
-    // const dataToSign2 = await dataItemInstance.getRaw(); // ArConnect's .signDataItem() uses this
-
-    // const signature = await this.api.sign(dataToSign2, sub);
-
-    // dataItemInstance2.setSignature(
-    //   Buffer.from(signature)
-    // );
 
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
     await dataItemInstance.sign(signer);
-
-    // console.log(
-    //   dataItemInstance.getRaw(),
-    //   dataItemInstance2.getRaw(),
-    // );
-
-    // console.log(
-    //   "OWNER =",
-    //   dataItemInstance.owner,
-    // );
 
     return dataItemInstance.getRaw().buffer;
   }

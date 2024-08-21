@@ -1,6 +1,11 @@
 import { Tag } from "warp-arbundles";
 import { GatewayConfig } from "../utils/arconnect/arconnect.types";
-import { OthentConfig, OthentOptions, OthentStorageKey } from "./config.types";
+import {
+  AppInfo,
+  OthentConfig,
+  OthentOptions,
+  OthentStorageKey,
+} from "./config.types";
 import { UrlString } from "../utils/typescript/url.types";
 
 export const DEFAULT_OTHENT_CONFIG = {
@@ -22,20 +27,31 @@ export const DEFAULT_OTHENT_CONFIG = {
   tags: [],
 } as const satisfies OthentConfig;
 
-export const DEFAULT_OTHENT_OPTIONS = {
-  ...DEFAULT_OTHENT_CONFIG,
-  appName: "",
-  appVersion: "",
-  persistCookie: false,
-  persistLocalStorage: false,
-  auth0Cache: "memory",
-} as const satisfies OthentOptions;
+export const DEFAULT_APP_INFO = {
+  name: "",
+  version: "",
+  env:
+    typeof location === "undefined"
+      ? "production"
+      : location.hostname === "localhost"
+        ? "development"
+        : "production",
+} as const satisfies AppInfo;
 
 export const DEFAULT_GATEWAY_CONFIG = {
   host: "arweave.net",
   protocol: "https",
   port: 443,
 } as const satisfies GatewayConfig;
+
+export const DEFAULT_OTHENT_OPTIONS = {
+  ...DEFAULT_OTHENT_CONFIG,
+  appInfo: DEFAULT_APP_INFO,
+  gatewayConfig: DEFAULT_GATEWAY_CONFIG,
+  persistCookie: false,
+  persistLocalStorage: false,
+  auth0Cache: "memory",
+} as const satisfies OthentOptions;
 
 export const DEFAULT_DISPATCH_NODE =
   "https://turbo.ardrive.io" as const satisfies UrlString;
