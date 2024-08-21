@@ -167,12 +167,25 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // AppInfo & Gateway configs:
 
-    this.appInfo = {
+    this.appInfo = appInfo = {
       ...appInfo,
       env: appInfo.env || DEFAULT_APP_INFO.env,
     };
 
-    this.gatewayConfig = gatewayConfig || DEFAULT_GATEWAY_CONFIG;
+    this.gatewayConfig = gatewayConfig =
+      gatewayConfig || DEFAULT_GATEWAY_CONFIG;
+
+    if (!appInfo.name || !appInfo.version || !appInfo.env) {
+      throw new Error(
+        "Incomplete `appInfo`: `name`, `version` and `env` are required.",
+      );
+    }
+
+    if (!gatewayConfig.host || !gatewayConfig.port || !gatewayConfig.protocol) {
+      throw new Error(
+        "Incomplete `gatewayConfig`: `host`, `port` and `protocol` are required.",
+      );
+    }
 
     // Cookie and localStorage persistance (validation):
 
