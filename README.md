@@ -26,6 +26,42 @@ Learn how to set it up at https://docs.othent.io or looking at our demo's code a
 
 <br />
 
+## Usage
+
+```ts
+import { Othent, AppInfo } from "@othent/kms";
+
+const appInfo: AppInfo = {
+  name: "My Awesome App",
+  version: "1.0.0",
+  env: "production",
+};
+
+const othent = new Othent({ appInfo, throwErrors: false, ... });
+
+othent.addEventLister("error", (err) => {
+  console.error(err);
+});
+
+await othent.connect();
+
+const mySecret = await othent.encrypt("My secret");
+
+const transaction = await arweave.createTransaction({
+  data: imySecret,
+});
+
+const result = await othent.dispatch(transaction);
+const transactionURL = `https://viewblock.io/arweave/tx/${result.id}`;
+
+console.log(transactionURL);
+```
+
+You can find more information and examples at https://docs.othent.io or looking at our demo's code at
+https://github.com/Othent/KMS-test-repo.
+
+<br />
+
 ## Publishing A New Release:
 
 ### Manually:

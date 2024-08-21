@@ -23,10 +23,10 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
-    "dev": "bun link && tsup src/index.ts --format cjs,esm --dts --watch",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "clean": "rm -rf dist",
-    "nuke": "pnpm clean && rm -rf node_modules pnpm-lock.yaml bun.lockb",
-    "test": "bun test",
+    "nuke": "pnpm clean && rm -rf node_modules pnpm-lock.yaml",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "prettier": "prettier --write .",
     "preversion": "pnpm test",
     "version": "bash ./scripts/sync-version.sh && pnpm run build && git add .",
