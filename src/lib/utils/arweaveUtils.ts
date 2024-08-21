@@ -16,7 +16,12 @@ export type TypedArray =
   | BigInt64Array
   | BigUint64Array;
 
-export type BinaryDataType = ArrayBuffer | TypedArray | DataView | Buffer;
+export type BinaryDataType =
+  | ArrayBuffer
+  | ArrayBufferView
+  | TypedArray
+  | DataView
+  | Buffer;
 
 function binaryDataTypeToUint8Array(buffer: BinaryDataType): Uint8Array {
   if (
