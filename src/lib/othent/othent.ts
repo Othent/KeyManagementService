@@ -167,25 +167,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // AppInfo & Gateway configs:
 
-    this.appInfo = appInfo = {
-      ...appInfo,
-      env: appInfo.env || DEFAULT_APP_INFO.env,
-    };
-
-    this.gatewayConfig = gatewayConfig =
-      gatewayConfig || DEFAULT_GATEWAY_CONFIG;
-
-    if (!appInfo.name || !appInfo.version || !appInfo.env) {
-      throw new Error(
-        "Incomplete `appInfo`: `name`, `version` and `env` are required.",
-      );
-    }
-
-    if (!gatewayConfig.host || !gatewayConfig.port || !gatewayConfig.protocol) {
-      throw new Error(
-        "Incomplete `gatewayConfig`: `host`, `port` and `protocol` are required.",
-      );
-    }
+    this.setAppInfo(appInfo);
+    this.setGatewayConfig(gatewayConfig);
 
     // Cookie and localStorage persistance (validation):
 
@@ -331,6 +314,49 @@ export class Othent implements Omit<ArConnect, "connect"> {
     }
 
     this.api = new OthentKMSClient(this.config.serverBaseURL, this.auth0);
+  }
+
+  /**
+   * @param appInfo Setter and validator for `appInfo`.
+   *
+   * @returns `Othent.appInfo`
+   */
+  private setAppInfo(appInfo: AppInfo) {
+    const nextAppInfo = {
+      ...appInfo,
+      env: appInfo.env || DEFAULT_APP_INFO.env,
+    };
+
+    if (!nextAppInfo.name || !nextAppInfo.version || !nextAppInfo.env) {
+      throw new Error(
+        "Incomplete `appInfo`: `name`, `version` and `env` are required.",
+      );
+    }
+
+    if (this.auth0) this.auth0.setAppInfo(nextAppInfo);
+
+    return (this.appInfo = nextAppInfo);
+  }
+
+  /**
+   * @param appInfo Setter and validator for `gatewayConfig`.
+   *
+   * @returns `Othent.gatewayConfig`
+   */
+  private setGatewayConfig(gatewayConfig?: GatewayConfig) {
+    const nextGatewayConfig = gatewayConfig || DEFAULT_GATEWAY_CONFIG;
+
+    if (
+      !nextGatewayConfig.host ||
+      !nextGatewayConfig.port ||
+      !nextGatewayConfig.protocol
+    ) {
+      throw new Error(
+        "Incomplete `gatewayConfig`: `host`, `port` and `protocol` are required.",
+      );
+    }
+
+    return (this.gatewayConfig = nextGatewayConfig);
   }
 
   /**
@@ -554,12 +580,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
       );
     }
 
-    if (appInfo) {
-      this.appInfo = appInfo;
-      this.auth0.setAppInfo(appInfo);
-    }
-
-    this.gatewayConfig = gateway || DEFAULT_GATEWAY_CONFIG;
+    if (appInfo) this.setAppInfo(appInfo);
+    if (gateway) this.setGatewayConfig(gateway);
 
     // TODO: We can probably save a token generation on page first load using Auth0Client.checkSession() instead.
     // TODO: If the user is already authenticated, this should be a NOOP.
