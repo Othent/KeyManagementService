@@ -111,6 +111,11 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   gatewayConfig: GatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
+  /**
+   * Instantiate `Othent`.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/constructor|constructor() docs}
+   */
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     // Buffer polyfill:
 
@@ -371,6 +376,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    *
    * @returns A cleanup function that must be called whenever Othent needs to stop listening for `storage` events (e.g.
    * to be used in React's `useEffects`'s cleanup function).
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/start-tab-synching|startTabSynching() docs}
    */
   startTabSynching() {
     if (!this.config.localStorageKey) {
@@ -387,9 +394,21 @@ export class Othent implements Omit<ArConnect, "connect"> {
   }
 
   /**
+   * If and only if you set the [`auth0LogInMethod = "redirect"`](./constructor.md#auth0loginmethod-auth0loginmethod) option,
+   * users will be redirected to Auth0 to authenticate and then back to your application. When they land bank in your
+   * application, you must call `completeConnectionAfterRedirect()` to complete the authentication process.
+   *
+   * By default, `callbackUriWithParams = location.href`, if you environment supports it. Otherwise, you'll have to manually
+   * pass an URI with the `code` and `state` params provided by Auth0, which handles the redirect callback.
+   *
+   * See [Auth0's `handleRedirectCallback`](https://auth0.github.io/auth0-spa-js/classes/Auth0Client.html#handleRedirectCallback).
    *
    * @param callbackUriWithParams
-   * @returns
+   *
+   * @returns A Promise with the `UserDetails` or `null` if the log in modal was closed, could not even be opened or
+   * authentication failed.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/complete-connection-after-redirect|completeConnectionAfterRedirect() docs}
    */
   async completeConnectionAfterRedirect(
     callbackUriWithParams?: Auth0RedirectUriWithParams,
@@ -433,13 +452,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
     return userDetails;
   }
 
-  /**
-   * @returns `true` if Othent's Auth0 client has been initialized; `false` otherwise.
-   */
-  get isReady() {
-    return this.auth0.isReady;
-  }
-
   // ERROR EVENT / ERROR HANDLING:
 
   private onError(error: unknown) {
@@ -465,7 +477,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
    *
    * @param type `"auth"` or `error`.
    * @param listener Function of type `AuthListener` or `ErrorListener`.
+   *
    * @returns A cleanup function that will remove the error listener when called.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/events|Events docs}
    */
   addEventListener<E extends OthentEventType>(
     type: E,
@@ -499,6 +514,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    *
    * @param type `"auth"` or `error`.
    * @param listener Function of type `AuthListener` or `ErrorListener`.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/events|Events docs}
    */
   removeEventListener<E extends OthentEventType>(
     type: E,
@@ -522,6 +539,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * @returns `true` if the user is authenticated; `false` otherwise.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/is-authenticated|isAuthenticated docs}
    */
   get isAuthenticated() {
     return this.auth0.isAuthenticated;
@@ -534,6 +553,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * - `autoConnect === "lazy"`: Authenticates them automatically, either from an existing session or by prompting them
    *   to sign in/up again. It throws an error if authentication fails.
    * - `autoConnect === "off"`: It throws an error.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/require-auth|requireAuth() docs}
    */
   requireAuth() {
     return this.requireUserDataOrThrow().then(() => {});
@@ -548,6 +569,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * - `autoConnect === "off"`: It throws an error.
    *
    * @returns `Promise<{ sub, publicKey }>` to get these 2 properties required in most Othent functions.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/require-auth|requireAuth() docs}
    */
   private async requireUserDataOrThrow() {
     if (this.config.autoConnect !== "off" && !this.auth0.isAuthenticated) {
@@ -572,6 +595,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    *
    * @returns A Promise with the `UserDetails` or `null` if the log in modal was closed, could not even be opened or
    * authentication failed.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/connect|connect() docs}
    */
   async connect(
     permissions?: PermissionType[],
@@ -700,6 +725,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Logs out the user (disconnect the user's wallet). This will require the user to log back in after called.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/disconnect|disconnect() docs}
    */
   async disconnect() {
     return this.auth0.logOut();
@@ -715,6 +742,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * This function assumes (and requires) a user is authenticated.
    *
    * @returns A Promise with the active wallet address of the users wallet.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-active-address|getActiveAddress() docs}
    */
   getActiveAddress() {
     return Promise.resolve(this.getSyncActiveAddress());
@@ -726,6 +755,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * This function assumes (and requires) a user is authenticated.
    *
    * @returns A Promise with the owner (jwk.n field) of the users wallet.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-active-public-key|getActivePublicKey() docs}
    */
   getActivePublicKey() {
     return Promise.resolve(this.getSyncActivePublicKey());
@@ -740,6 +771,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * This function assumes (and requires) a user is authenticated.
    *
    * @returns A Promise with an array of all wallet addresses of the users wallet.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-all-addresses|getAllAddresses() docs}
    */
   getAllAddresses() {
     return Promise.resolve(this.getSyncAllAddresses());
@@ -760,6 +793,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * This function assumes (and requires) a user is authenticated.
    *
    * @returns A Promise containing an object that maps each wallet addresses to their nickname.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-wallet-names|getWalletNames() docs}
    */
   getWalletNames() {
     return Promise.resolve(this.getSyncWalletNames());
@@ -769,6 +804,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * Returns an object with all the user details of the active (authenticated) user account.
    *
    * @returns A Promise containing all the user details of the active user, or `null` if the user is not authenticated.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-user-details|getUserDetails() docs}
    */
   getUserDetails() {
     return Promise.resolve(this.getSyncUserDetails());
@@ -778,7 +815,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Get the active wallet address of the users wallet. This function assumes (and requires) a user is authenticated.
+   *
    * @returns The active wallet address of the users wallet.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-sync-active-address|getSyncActiveAddress() docs}
    */
   getSyncActiveAddress() {
     return this.auth0.getCachedUserAddress() || ("" as const);
@@ -786,7 +826,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Get the owner (jwk.n) field of the users wallet. This function assumes (and requires) a user is authenticated.
+   *
    * @returns The owner (jwk.n) field of the users wallet.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-sync-active-public-key|getSyncActivePublicKey() docs}
    */
   getSyncActivePublicKey() {
     return this.auth0.getCachedUserPublicKey() || ("" as const);
@@ -794,7 +837,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Get all addresses of the users wallet. This function assumes (and requires) a user is authenticated.
+   *
    * @returns All wallet addresses of the users wallet.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-sync-all-addresses|getSyncAllAddresses() docs}
    */
   getSyncAllAddresses() {
     const address = this.auth0.getCachedUserAddress();
@@ -804,7 +850,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Get the wallets (users) email. This function assumes (and requires) a user is authenticated.
+   *
    * @returns The wallets (users) email.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-sync-wallet-names|getSyncWalletNames() docs}
    */
   getSyncWalletNames(): Promise<Record<B64UrlString, string>> {
     const address = this.auth0.getCachedUserAddress();
@@ -821,7 +870,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Get user details. This function assumes (and requires) a user is authenticated.
+   *
    * @returns The user's details.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-sync-user-details|getSyncUserDetails() docs}
    */
   getSyncUserDetails() {
     return this.auth0.getCachedUserDetails();
@@ -876,6 +928,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @param transaction The transaction to sign.
    *
    * @returns A Promise containing a new signed transaction.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/sign|sign() docs}
    */
   async sign(transaction: Transaction): Promise<Transaction> {
     const { sub, publicKey } = await this.requireUserDataOrThrow();
@@ -928,6 +982,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @param transaction The transaction to sign and dispatch.
    *
    * @returns The signed version of the transaction.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/dispatch|dispatch() docs}
    */
   async dispatch(
     transaction: Transaction,
@@ -1012,6 +1068,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @param plaintext The data in string format to sign.
    *
    * @returns The encrypted data.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/encrypt|encrypt() docs}
    */
   async encrypt(plaintext: string | BinaryDataType): Promise<Uint8Array> {
     const { sub } = await this.requireUserDataOrThrow();
@@ -1029,6 +1087,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @param ciphertext The data to decrypt.
    *
    * @returns The decrypted data.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/decrypt|decrypt() docs}
    */
   async decrypt(ciphertext: BinaryDataType): Promise<Uint8Array> {
     const { sub } = await this.requireUserDataOrThrow();
@@ -1042,9 +1102,14 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Generate a signature. This function assumes (and requires) a user is authenticated.
-   * @param data The data to sign.
-   * @returns The {@linkcode Buffer} format of the signature.
+   *
    * @deprecated Use `sign`, `signDataItems` or `signMessage` instead.
+   *
+   * @param data The data to sign.
+   *
+   * @returns The {@linkcode Buffer} format of the signature.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/signature|signature() docs}
    */
   async signature(data: string | BinaryDataType): Promise<Uint8Array> {
     const { sub } = await this.requireUserDataOrThrow();
@@ -1057,8 +1122,12 @@ export class Othent implements Omit<ArConnect, "connect"> {
   /**
    * The signDataItem() function allows you to create and sign a data item object, compatible with arbundles. These data
    * items can then be submitted to an ANS-104 compatible bundler.
+   *
    * @param dataItem The data to sign.
+   *
    * @returns The signed data item.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/sign-data-item|signDataItem() docs}
    */
   async signDataItem(dataItem: DataItem): Promise<ArrayBufferLike> {
     // TODO: DateItem.verify won't work when loading the returned value into it.
@@ -1094,8 +1163,12 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Sign the given message. This function assumes (and requires) a user is authenticated.
+   *
    * @param message The message to sign.
+   *
    * @returns The signed version of the message.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/sign-message|signMessage() docs}
    */
   async signMessage(
     data: string | BinaryDataType,
@@ -1117,8 +1190,12 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   /**
    * Verify the given message. This function assumes (and requires) a user is authenticated.
+   *
    * @param signature The signature to verify.
+   *
    * @returns The signed version of the message.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/verify-message|verifyMessage() docs}
    */
   async verifyMessage(
     data: string | BinaryDataType,
@@ -1174,6 +1251,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @param options Hash algorithm (default = `SHA-256`).
    *
    * @returns Hash `Uint8Array`.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/private-hash|privateHash() docs}
    */
   async privateHash(
     data: string | BinaryDataType,
@@ -1191,6 +1270,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * Get the Arweave config used by Othent.
    *
    * @returns Promise of Othent's `GatewayConfig`.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-arweave-config|getArweaveConfig() docs}
    */
   getArweaveConfig(): Promise<GatewayConfig> {
     return Promise.resolve(this.gatewayConfig);
@@ -1200,6 +1281,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * Get the permissions Othent can use in the current site.
    *
    * @returns Promise of Othent's `PermissionType[]`.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/get-permissions|getPermissions() docs}
    */
   getPermissions(): Promise<PermissionType[]> {
     return Promise.resolve(Othent.ALL_PERMISSIONS);
