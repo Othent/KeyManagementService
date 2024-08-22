@@ -63,6 +63,7 @@ import {
   PopupCancelledError,
   PopupTimeoutError,
 } from "@auth0/auth0-spa-js";
+import { Buffer } from "buffer";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
@@ -111,15 +112,21 @@ export class Othent implements Omit<ArConnect, "connect"> {
   gatewayConfig: GatewayConfig = DEFAULT_GATEWAY_CONFIG;
 
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
+    // Buffer polyfill:
+
+    if (!window.Buffer) {
+      globalThis.Buffer = Buffer;
+
+      console.warn(
+        "`globalThis.Buffer` has been polyfilled for you. Note this could have side-effect and affect other libraries.",
+      );
+    }
+
     // Crypto validation:
 
-    let crypto: Crypto | null = null;
+    const crypto: Crypto | null = globalThis.crypto || null;
 
-    if (typeof window !== "undefined") {
-      crypto = window.crypto;
-    } else if (typeof global !== "undefined") {
-      crypto = global.crypto;
-    } else {
+    if (!crypto) {
       throw new Error(
         "A Crypto module is needed for Othent to work. If your environment doesn't natively provide one, you should polyfill it.",
       );
