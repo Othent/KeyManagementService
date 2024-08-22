@@ -1,8 +1,3 @@
-import { Buffer } from "buffer";
-
-// TODO: Polyfill. Should we overwrite a global like this from a library?
-window.Buffer = Buffer;
-
 // SDK:
 // If you are looking at the code, this is probably where you'd want to start.
 
