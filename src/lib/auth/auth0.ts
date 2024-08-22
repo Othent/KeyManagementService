@@ -226,7 +226,9 @@ export class OthentAuth0Client {
       const cookieStorage = getCookieStorage();
 
       if (userDetails) {
-        cookieStorage.setItem(cookieKey, JSON.stringify(userDetails));
+        cookieStorage.setItem(cookieKey, JSON.stringify(userDetails), {
+          ttlHours: this.refreshTokenExpirationMs / 3600000,
+        });
       } else if (cookieStorage.getItem(cookieKey) !== null) {
         cookieStorage.removeItem(cookieKey);
       }

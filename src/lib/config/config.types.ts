@@ -23,6 +23,35 @@ export type Auth0LogInMethod = "popup" | "redirect";
 
 export type AutoConnect = "eager" | "lazy" | "off";
 
+export interface AppInfo {
+  /**
+   * Name of your app. This will add a tag `App-Name: <appName>` to any transaction signed or sent using `Othent.sign`,
+   * `Othent.dispatch` or `Othent.signDataItem`.
+   */
+  name: string;
+
+  /**
+   * Version of your app. This will add a tag `App-Version: <appVersion>` to any transaction signed or sent using
+   * `Othent.sign`, `Othent.dispatch` or `Othent.signDataItem`.
+   */
+  version: string;
+
+  /**
+   * Environment your app is currently running on (e.g. "development", "staging", "production", ...). This will add a
+   * tag `App-Env: <appEnv>` to any transaction signed or sent using `Othent.sign`, `Othent.dispatch` or
+   * `Othent.signDataItem`.
+   *
+   * If no value (empty `string`) is provided, this will automatically be set to `"development"` if
+   * `location.hostname = "localhost"` or `"production"` otherwise.
+   */
+  env: string;
+
+  /**
+   * Image with the logo of your app. Optional and not used for now.
+   */
+  logo?: UrlString;
+}
+
 export interface OthentConfig {
   /**
    * Enable additional logs.
@@ -196,20 +225,25 @@ export interface OthentOptions
   gatewayConfig?: GatewayConfig;
 
   /**
-   * Set this to `true` or the name of the cookie where you'd like the user details JSON to be stored.
+   * Set this to `true` or the name of the cookie where you'd like the user details JSON to be stored. Useful when you use
+   * SSR and need to user details to be available on the server.
    *
-   * Note setting thisoption to `true` will set the cookie on the client / frontend, but it won't recover it on the
-   * server / backend. If you are using SSR, you need to use `cookie = true` in conjunction with `initialUserDetails`.
+   * The cookie will expire after `refreshTokenExpirationMs`.
+   * Note setting this option to `true` will set the cookie on client / frontend, but you'll have to manually recover it on
+   * the server / backend, and pass it to `Othent`'s `constructor` as `initialUserDetails`.
    *
    * @defaultValue `false`
    */
   persistCookie?: boolean | OthentStorageKey;
 
   /**
-   * Set this to `true` or the name of the `localStorage` item where you'd like the user details JSON to be stored.
+   * Set this to `true` or the name of the `localStorage` item where you'd like the user details JSON to be stored. Useful
+   * to immediately sync user details and authentication status across tabs, and to make it look to users as if they were
+   * already authenticated when coming back to your app before `refreshTokenExpirationMs`, even if the session still needs
+   * to be refreshed by calling `connect()` or `requireAuth()`.
    *
-   * Note the stored values will be removed / discarded if more than `refreshTokenExpirationMs` have passed, but will
-   * remain in `localStorage` until then or until the user logs out.
+   * The stored values will be removed / discarded if more than `refreshTokenExpirationMs` have passed, but will remain
+   * in `localStorage` until the user logs out or until that time has passed and `Othent` is instantiated again.
    *
    * @defaultValue `false`
    */
@@ -240,33 +274,4 @@ export interface OthentOptions
    * @defaultValue `memory`
    */
   auth0Cache?: Auth0Cache;
-}
-
-export interface AppInfo {
-  /**
-   * Name of your app. This will add a tag `App-Name: <appName>` to any transaction signed or sent using `Othent.sign`,
-   * `Othent.dispatch` or `Othent.signDataItem`.
-   */
-  name: string;
-
-  /**
-   * Version of your app. This will add a tag `App-Version: <appVersion>` to any transaction signed or sent using
-   * `Othent.sign`, `Othent.dispatch` or `Othent.signDataItem`.
-   */
-  version: string;
-
-  /**
-   * Environment your app is currently running on (e.g. "development", "staging", "production", ...). This will add a
-   * tag `App-Env: <appEnv>` to any transaction signed or sent using `Othent.sign`, `Othent.dispatch` or
-   * `Othent.signDataItem`.
-   *
-   * If no value (empty `string`) is provided, this will automatically be set to `"development"` if
-   * `location.hostname = "localhost"` or `"production"` otherwise.
-   */
-  env: string;
-
-  /**
-   * Image with the logo of your app. Optional and not used for now.
-   */
-  logo?: UrlString;
 }

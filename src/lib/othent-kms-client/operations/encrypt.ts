@@ -5,10 +5,10 @@ import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType, stringToUint8Array } from "../../utils/arweaveUtils";
 
 // New format:
-// export type EncryptResponseData = string;
+// type EncryptResponseData = string;
 
 // Old format:
-export interface EncryptResponseData {
+interface EncryptResponseData {
   data: string | BufferObject;
 }
 

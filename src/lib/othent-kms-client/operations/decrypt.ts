@@ -9,10 +9,10 @@ import {
 } from "../../utils/arweaveUtils";
 
 // New format:
-// export type DecryptResponseData = string;
+// type DecryptResponseData = string;
 
 // Old format:
-export interface DecryptResponseData {
+interface DecryptResponseData {
   data: string | BufferObject;
 }
 

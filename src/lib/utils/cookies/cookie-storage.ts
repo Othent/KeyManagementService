@@ -179,13 +179,13 @@ let cookieStorage: CookieStorage | null = null;
 
 export function getCookieStorage() {
   if (!cookieStorage) {
-    const isLocalhost =
-      process.env.NODE_ENV === "development" &&
-      location?.hostname === "localhost";
+    const hostname = typeof location === "undefined" ? "" : location.hostname;
+    const isDevelopment =
+      process.env.NODE_ENV === "development" && hostname === "localhost";
 
     cookieStorage = new CookieStorage({
-      secure: isLocalhost ? false : undefined,
-      domain: isLocalhost ? false : undefined,
+      secure: !isDevelopment,
+      domain: isDevelopment ? undefined : hostname,
     });
   }
 

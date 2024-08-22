@@ -32,7 +32,7 @@ export type * from "./lib/config/config.types";
 export type {
   Auth0Provider,
   Auth0Sub,
-  // Auth0ProviderLabel,    // Not needed (only used internally)
+  Auth0ProviderLabel,
   Auth0WalletAddressLabel,
   ANSDomain,
   OthentWalletAddressLabel,

@@ -59,6 +59,8 @@ export interface IdTokenWithData<D = void> extends JwtPayload, User {
 
 // User details:
 
+// TODO: These need to be integrated and defined here:
+
 export type Auth0Provider =
   | `apple`
   | `auth0`
