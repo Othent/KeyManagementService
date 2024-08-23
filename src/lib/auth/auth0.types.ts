@@ -1,9 +1,8 @@
 import {
   AuthorizationParams as Auth0AuthorizationParams,
-  User,
+  IdToken,
 } from "@auth0/auth0-spa-js";
 import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
-import type { JwtPayload } from "jwt-decode";
 import { RemoveIndexSignature } from "../utils/typescript/type-utils.types";
 import {
   AppInfo,
@@ -43,11 +42,7 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
 
 // User JWT data:
 
-export interface IdTokenWithData<D = void> extends JwtPayload, User {
-  // Non-default from Auth0:
-  nonce: string;
-  sid: string;
-
+export interface IdTokenWithData<D = void> extends IdToken {
   // Custom from Auth0's Add User Metadata action:
   owner: B64UrlString; // Public key derived from `sub`.
   walletAddress: B64UrlString; // Wallet address derived from `owner`.
