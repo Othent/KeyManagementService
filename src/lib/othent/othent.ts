@@ -119,7 +119,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
     // Buffer polyfill:
 
-    if (!window.Buffer) {
+    if (!globalThis.Buffer) {
       globalThis.Buffer = Buffer;
 
       console.warn(
@@ -264,7 +264,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
       // TODO: This will work fine as soon as ArConnect also updates their types to match their docs. Those changes have
       // already been added to `arconnect.types.ts`:
       // window.arweaveWallet = this as unknown as ArConnect;
-      window.arweaveWallet = this as any;
+
+      (globalThis as any).arweaveWallet = this as any;
     }
 
     // Error handling:

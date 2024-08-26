@@ -200,12 +200,14 @@ export class OthentAuth0Client {
   initStorageSyncing() {
     // TODO: Add alternative to sync using `BroadcastChannel` without persisting anything.
 
-    if (!this.localStorageKey) return;
+    if (!this.localStorageKey || typeof window === "undefined") return;
 
     window.addEventListener("storage", this.handleStorage);
   }
 
   stopStorageSyncing() {
+    if (typeof window === "undefined") return;
+
     window.removeEventListener("storage", this.handleStorage);
   }
 
@@ -256,13 +258,15 @@ export class OthentAuth0Client {
   // `userDetails` setters:
 
   private setUserDetails(userDetails: UserDetails | null, updateAuth = true) {
-    window.clearTimeout(this.userDetailsExpirationTimeoutID);
+    if (typeof window !== "undefined") {
+      window.clearTimeout(this.userDetailsExpirationTimeoutID);
 
-    if (userDetails) {
-      this.userDetailsExpirationTimeoutID = window.setTimeout(
-        this.logOut,
-        this.refreshTokenExpirationMs,
-      );
+      if (userDetails) {
+        this.userDetailsExpirationTimeoutID = window.setTimeout(
+          this.logOut,
+          this.refreshTokenExpirationMs,
+        );
+      }
     }
 
     const updatedAlreadyEmitted = this.authEventListenerHandler.emit(

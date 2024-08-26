@@ -61,7 +61,7 @@ export interface OthentConfig {
   debug: boolean;
 
   /**
-   * Inject Othent's instance as `window.arweaveWallet` so that `arweave-js` can use it on the background.
+   * Inject Othent's instance as `globalThis.arweaveWallet` so that `arweave-js` can use it on the background.
    *
    * @defaultValue `false`
    */
