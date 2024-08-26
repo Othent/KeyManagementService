@@ -1,19 +1,64 @@
-// functions
-export * from "./lib/mapping/connect";
-export * from "./lib/mapping/decrypt";
-export * from "./lib/mapping/disconnect";
-export * from "./lib/mapping/encrypt";
-export * from "./lib/mapping/getActiveAddress";
-export * from "./lib/mapping/getActivePublicKey";
-export * from "./lib/mapping/getWalletNames";
-export * from "./lib/mapping/sign";
-export * from "./lib/mapping/signature";
-export * from "./lib/mapping/dispatch";
-export * from "./lib/mapping/signMessage";
-export * from "./lib/mapping/verifyMessage";
-export * from "./lib/mapping/signDataItem";
-// types
-export * from "./types/mapping/connect";
+// SDK:
+// If you are looking at the code, this is probably where you'd want to start.
 
-import { Buffer } from "buffer";
-window.Buffer = Buffer;
+export { Othent } from "./lib/othent/othent";
+export type * from "./lib/othent/othent.types";
+
+// Config:
+
+export {
+  DEFAULT_OTHENT_CONFIG,
+  DEFAULT_OTHENT_OPTIONS,
+  DEFAULT_APP_INFO,
+  DEFAULT_GATEWAY_CONFIG,
+  DEFAULT_DISPATCH_NODE,
+  DEFAULT_COOKIE_KEY,
+  DEFAULT_LOCAL_STORAGE_KEY,
+  // CLIENT_NAME,     // Already exported as static member
+  // CLIENT_VERSION,  // Already exported as static member
+  // ANALYTICS_TAGS,  // Not needed (only used internally)
+} from "./lib/config/config.constants";
+
+export type * from "./lib/config/config.types";
+
+// Auth0:
+// Almost everything here is internal.
+
+export type {
+  Auth0Provider,
+  Auth0Sub,
+  Auth0ProviderLabel,
+  Auth0WalletAddressLabel,
+  ANSDomain,
+  OthentWalletAddressLabel,
+  UserDetails,
+} from "./lib/auth/auth0.types";
+
+// API:
+// Export for backwards compatibility / easier migration.
+
+export type { BufferObject } from "./lib/othent-kms-client/operations/common.types";
+
+export { isBufferObject } from "./lib/othent-kms-client/operations/common.types";
+
+// ArConnect:
+// Export ArConnnect types that are also used to type params on `Othent`.
+
+export type {
+  PermissionType,
+  // DispatchResult   // We have our own
+  // AppInfo          // We have our own
+  GatewayConfig,
+  SignMessageOptions,
+  // DataItem         // We have our own
+} from "./lib/utils/arconnect/arconnect.types";
+
+// Errors:
+export { OthentErrorID, OthentError } from "./lib/utils/errors/error";
+
+// Misc.:
+export type * from "./lib/utils/typescript/url.types";
+
+// Buffer utils & transforms:
+// TODO: Export everything from arweaveUtils, rename to bufferUtils or similar, add tests, consider adding them into a namespace/object (like in bufferUtils.ts).
+export * from "./lib/utils/arweaveUtils";

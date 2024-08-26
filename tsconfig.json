@@ -2,10 +2,10 @@
   "compilerOptions": {
     /* Language and Environment */
     "target": "es2018",
-    "lib": ["es2018", "DOM"],
+    "lib": ["ESNext", "DOM"],
 
     /* Modules */
-    "module": "ES2015",
+    "module": "ES2020",
     "moduleResolution": "node",
 
     /* Emit */
