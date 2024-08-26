@@ -1,7 +1,7 @@
 {
   "name": "@othent/kms",
   "version": "2.0.0-beta.13",
-  "description": "Othent JS SDK to manage Arweave custodial wallets backend by Auth0 and Google Key Management Service.",
+  "description": "Othent JS SDK to manage Arweave wallets backend by Auth0 and Google Key Management Service.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
