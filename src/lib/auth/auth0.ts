@@ -37,13 +37,14 @@ import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
 
 export class OthentAuth0Client {
+  // TODO: Export as constant?
   static PROVIDER_LABELS: Record<Auth0Provider, Auth0ProviderLabel> = {
     apple: "Apple",
     auth0: "E-Mail",
     "google-oauth2": "Google",
+
     // TODO: Complete these values:
-    "<LinkedIn>": "LinkedIn",
-    "<X>": "X",
+    twitter: "X",
     "<Meta>": "Meta",
     "<Twitch>": "Twitch",
     github: "GitHub",
@@ -98,9 +99,16 @@ export class OthentAuth0Client {
   static async getUserDetails<D>(
     idToken: IdTokenWithData<D>,
   ): Promise<UserDetails> {
-    const { email = "", walletAddress } = idToken;
+    const { email = "", nickname = "", walletAddress } = idToken;
     const sub = (idToken.sub || "") as Auth0Sub;
+
     const authProvider = sub.split("|")[0] as Auth0Provider;
+
+    console.log(
+      sub,
+      authProvider,
+      OthentAuth0Client.PROVIDER_LABELS[authProvider],
+    );
 
     let walletAddressLabel: OthentWalletAddressLabel | null =
       await getAnsProfile(walletAddress);
@@ -109,7 +117,7 @@ export class OthentAuth0Client {
       const providerLabel =
         OthentAuth0Client.PROVIDER_LABELS[authProvider] || "Unknown Provider";
 
-      walletAddressLabel = `${providerLabel} (${email})`;
+      walletAddressLabel = `${providerLabel} (${email || (nickname ? `@${nickname}` : "")})`;
     }
 
     return {
