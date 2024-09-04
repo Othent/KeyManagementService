@@ -20,10 +20,9 @@ export async function decrypt(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
   ciphertext: string | BinaryDataType,
-  keyName: string,
 ): Promise<Uint8Array> {
   // TODO: `ciphertext` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
-  const encodedData = await auth0.encodeToken({ ciphertext, keyName });
+  const encodedData = await auth0.encodeToken({ fn: "decrypt", ciphertext });
 
   let plaintext: string | BufferObject | null = null;
 

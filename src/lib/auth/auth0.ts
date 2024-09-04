@@ -104,12 +104,6 @@ export class OthentAuth0Client {
 
     const authProvider = sub.split("|")[0] as Auth0Provider;
 
-    console.log(
-      sub,
-      authProvider,
-      OthentAuth0Client.PROVIDER_LABELS[authProvider],
-    );
-
     let walletAddressLabel: OthentWalletAddressLabel | null =
       await getAnsProfile(walletAddress);
 

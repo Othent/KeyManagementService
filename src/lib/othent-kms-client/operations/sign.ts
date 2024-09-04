@@ -16,10 +16,9 @@ export async function sign(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
   data: string | BinaryDataType,
-  keyName: string,
 ): Promise<Uint8Array> {
   // TODO: `data` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
-  const encodedData = await auth0.encodeToken({ data, keyName });
+  const encodedData = await auth0.encodeToken({ fn: "sign", data });
 
   let signature: string | BufferObject | null = null;
 

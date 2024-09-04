@@ -208,36 +208,53 @@ export interface BaseCryptoOperationData {
    * @deprecated We should use the Auth0's ID token `sub` property, which is already part of the token, rather than
    * sending the `keyName` as a separated property.
    */
-  keyName: string;
+  keyName?: never;
 }
 
+// TODO: Rename fn to path and make sure it matches the backend paths. Also, move them to constants.
+
 export interface CreateUserOperationData extends BaseCryptoOperationData {
+  fn: "createUser";
   importOnly?: boolean;
 }
 
+export interface FetchImportJobOperationData extends BaseCryptoOperationData {
+  fn: "fetchImportJob";
+}
+
 export interface ImportKeysOperationData extends BaseCryptoOperationData {
+  fn: "importKeys";
   wrappedSignKey: null | ArrayBuffer;
   wrappedEncryptDecryptKey: null | ArrayBuffer;
 }
 
+export interface ActivateKeysOperationData extends BaseCryptoOperationData {
+  fn: "activateKeys";
+}
+
 export interface SignOperationData extends BaseCryptoOperationData {
+  fn: "sign";
   // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
   data: string | BinaryDataType;
 }
 
 export interface EncryptOperationData extends BaseCryptoOperationData {
+  fn: "encrypt";
   // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
   plaintext: string | BinaryDataType;
 }
 
 export interface DecryptOperationData extends BaseCryptoOperationData {
+  fn: "decrypt";
   // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
   ciphertext: string | BinaryDataType;
 }
 
 export type CryptoOperationData =
   | CreateUserOperationData
+  | FetchImportJobOperationData
   | ImportKeysOperationData
+  | ActivateKeysOperationData
   | SignOperationData
   | EncryptOperationData
   | DecryptOperationData;

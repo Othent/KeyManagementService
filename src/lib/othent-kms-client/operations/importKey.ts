@@ -103,7 +103,7 @@ import { OthentAuth0Client } from "../../auth/auth0";
 import { AxiosInstance } from "axios";
 import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { google } from "@google-cloud/kms/build/protos/protos";
+import type { google } from "@google-cloud/kms/build/protos/protos";
 import { B64String, b64ToUint8Array } from "../../utils/arweaveUtils";
 
 // FETCH IMPORT JOB:
@@ -116,15 +116,19 @@ interface FetchImportJobResponseData {
 
 export async function fetchImportJob(
   api: AxiosInstance,
-  idToken: string,
+  auth0: OthentAuth0Client,
 ): Promise<ImportJob> {
+  const encodedData = await auth0.encodeToken({
+    fn: "fetchImportJob",
+  });
+
   let importJob: ImportJob | null = null;
 
   try {
     const fetchImportJobResponse = await api.post<FetchImportJobResponseData>(
       "/fetch-import-job",
       {
-        encodedData: idToken,
+        encodedData,
       } satisfies CommonEncodedRequestData,
     );
 
@@ -142,7 +146,8 @@ export async function fetchImportJob(
 
 // IMPORT KEYS:
 
-import CryptoKeyVersionState = google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState;
+// import CryptoKeyVersionState = google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState;
+type CryptoKeyVersionState = string;
 import { UserDetails } from "../../auth/auth0.types";
 import { sleep } from "../../utils/promises/promises.utils";
 
@@ -161,11 +166,10 @@ export async function importKeys(
   wrappedSignKey: null | ArrayBuffer,
   wrappedEncryptDecryptKey: null | ArrayBuffer,
 ) {
-  // TODO: `plaintext` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
   const encodedData = await auth0.encodeToken({
+    fn: "importKeys",
     wrappedSignKey,
     wrappedEncryptDecryptKey,
-    keyName: "",
   });
 
   let importKeysResult: ImportKeysResult | null = null;
@@ -204,14 +208,21 @@ interface ActivateKeysResponseData {
   activateKeysResult: ActivateKeysResult;
 }
 
-export async function activateKeys(api: AxiosInstance, idToken: string) {
+export async function activateKeys(
+  api: AxiosInstance,
+  auth0: OthentAuth0Client,
+) {
+  const encodedData = await auth0.encodeToken({
+    fn: "activateKeys",
+  });
+
   let activateKeysResult: ActivateKeysResult | null = null;
 
   try {
     const activateKeysResponse = await api.post<ActivateKeysResponseData>(
       "/activate-keys",
       {
-        encodedData: idToken,
+        encodedData,
       } satisfies CommonEncodedRequestData,
     );
 
@@ -254,33 +265,35 @@ type PEM =
 
 function pemToUint8Array(pem: PEM) {
   const keyMaterial = pem
-    .replace("\n", "")
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "") as B64String;
+    .replaceAll("\n", "")
+    .replace("-----BEGIN PUBLIC KEY-----", "")
+    .replace("-----END PUBLIC KEY-----", "") as B64String;
 
   // return base64ToArrayBuffer(keyMaterial);
   return b64ToUint8Array(keyMaterial);
 }
 
 async function cryptoKeyFromPEM(pem: PEM) {
+  console.log(`PEM to convert =`, pem);
+
   return window.crypto.subtle.importKey(
-    "pkcs8",
+    // "pkcs8",
+    "spki",
     pemToUint8Array(pem),
     {
       name: "RSA-OAEP",
       hash: { name: "SHA-256" }, // or SHA-512
     },
-    true,
-    ["encrypt", "decrypt"],
+    false,
+    ["wrapKey", "encrypt"],
   );
 }
 
 export async function testClientKeyGenerationAndWrapping(
   api: AxiosInstance,
-  idToken: string,
   auth0: OthentAuth0Client,
 ) {
-  console.log("TESTING...");
+  console.log("\ntestClientKeyGenerationAndWrapping()\n");
 
   // await createImportJob("Job3");
   // Generate a 32-byte key to import.
@@ -299,7 +312,7 @@ export async function testClientKeyGenerationAndWrapping(
   */
   // const res = await importTheKey('Job3', 'Key', processedKey)
 
-  const importJob = await fetchImportJob(api, idToken);
+  const importJob = await fetchImportJob(api, auth0);
 
   console.log("importJob =", importJob);
 
@@ -307,13 +320,23 @@ export async function testClientKeyGenerationAndWrapping(
 
   if (!wrappingKeyPEM) throw new Error("No PEM");
 
-  const wrappingKey = await cryptoKeyFromPEM(wrappingKeyPEM as PEM);
+  let wrappingKey: CryptoKey | null = null;
+
+  try {
+    wrappingKey = await cryptoKeyFromPEM(wrappingKeyPEM as PEM);
+
+    console.log("wrappingKey =", wrappingKey);
+  } catch (err) {
+    console.error("Error importing wrapping key:", err);
+  }
+
+  if (!wrappingKey) throw new Error("No wrappingKey");
 
   /*
   const wrappingKeyPair = await crypto.subtle.generateKey({
     name: "RSA-OAEP",
     modulusLength: 3072,
-    publicExponent: new Uint8Array([1,0,1]),
+    // publicExponent: new Uint8Array([1,0,1]),
     hash: "SHA-256",
   }, false, ["wrapKey", "unwrapKey", "encrypt", "decrypt"]);
 
@@ -489,7 +512,7 @@ export async function testClientKeyGenerationAndWrapping(
   let activateKeysResult: ActivateKeysResult | null = null;
 
   do {
-    activateKeysResult = await activateKeys(api, idToken);
+    activateKeysResult = await activateKeys(api, auth0);
 
     console.log("activateKeysResult =", activateKeysResult);
 

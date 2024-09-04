@@ -118,6 +118,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/constructor|constructor() docs}
    */
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
+    console.clear();
+    console.log("TESTING IMPORT", new Date().toUTCString());
+
     // Buffer polyfill:
 
     if (!globalThis.Buffer) {
@@ -655,6 +658,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
         // well, `logIn()` will internally call `getTokenSilently()` again after
         // successful authentication, and return a valid token with the user data:
 
+        // TODO: The `getTokenSilently` inside `logIn` can probably be removed.
         const response = await this.auth0.logIn();
 
         id_token = response.id_token;
@@ -696,13 +700,18 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // We should now have a valid token, but potentially not the user details...
 
+    // TODO: This check needs to be improved. In the production version, this should:
+    // - Redirect users to a popup / iframe where they can generate and get their keys and learn about them.
+    // - Make sure this works for new users and also for users that did not complete the key generation/import step before.
+
     if (id_token && (!userDetails || !userDetails.walletAddress)) {
       // If that's the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
       // got to it to avoid making another call to `encodeToken()` / `getTokenSilently()`:
 
-      console.log("Creating import job...");
+      console.log("Creating user & import job...");
 
-      await this.api.createUser(id_token, true);
+      // TODO: What if the user was already created but the key import process wasn't completed?
+      await this.api.createUser({ importOnly: true });
 
       // Lastly, we request a new token to update the cached user details and confirm that the `user_metadata` has been
       // correctly updated. Note we don't use as try-catch here, as if any error happens at this point, we just want to
@@ -714,11 +723,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
       userDetails = response.userDetails;
     }
 
-    await testClientKeyGenerationAndWrapping(
-      this.api.api,
-      id_token,
-      this.auth0,
-    );
+    // TODO: Do not reuse the same id_token here as it has been used already in createUser()!
+    await testClientKeyGenerationAndWrapping(this.api.api, this.auth0);
 
     // We should now definitely have a valid token and user details:
 
@@ -942,7 +948,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/sign|sign() docs}
    */
   async sign(transaction: Transaction): Promise<Transaction> {
-    const { sub, publicKey } = await this.requireUserDataOrThrow();
+    const { publicKey } = await this.requireUserDataOrThrow();
 
     const arweave = initArweave(this.gatewayConfig);
 
@@ -968,7 +974,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     });
 
     const dataToSign = await transactionToSign.getSignatureData();
-    const signatureBuffer = await this.api.sign(dataToSign, sub);
+    const signatureBuffer = await this.api.sign(dataToSign);
     const id = await hash(signatureBuffer);
 
     transactionToSign.setSignature({
@@ -1082,9 +1088,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/encrypt|encrypt() docs}
    */
   async encrypt(plaintext: string | BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
-    const ciphertextBuffer = await this.api.encrypt(plaintext, sub);
+    const ciphertextBuffer = await this.api.encrypt(plaintext);
 
     return ciphertextBuffer;
   }
@@ -1101,9 +1107,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/decrypt|decrypt() docs}
    */
   async decrypt(ciphertext: BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
-    const plaintextBuffer = await this.api.decrypt(ciphertext, sub);
+    const plaintextBuffer = await this.api.decrypt(ciphertext);
 
     return plaintextBuffer;
   }
@@ -1122,9 +1128,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/signature|signature() docs}
    */
   async signature(data: string | BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
-    const signatureBuffer = await this.api.sign(data, sub);
+    const signatureBuffer = await this.api.sign(data);
 
     return signatureBuffer;
   }
@@ -1144,7 +1150,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     // TODO: Install `warp-bundles` and try to see what's going on here.
     // TODO: Check if this is working in ArConnect: https://github.com/arconnectio/ArConnect/blob/production/src/api/modules/sign_data_item/sign_data_item.background.ts
 
-    const { sub, publicKey } = await this.requireUserDataOrThrow();
+    const { publicKey } = await this.requireUserDataOrThrow();
 
     const { data, tags, ...options } = dataItem;
 
@@ -1153,7 +1159,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
-      sign: this.api.getSignerSignFn(sub),
+      sign: this.api.getSignerSignFn(),
       // Note we don't provide `verify` as it's not used anyway:
       // verify: () => true,
     };
@@ -1184,7 +1190,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     data: string | BinaryDataType,
     options?: SignMessageOptions,
   ): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
@@ -1193,7 +1199,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       binaryDataTypeOrStringToBinaryDataType(data),
     );
 
-    const signatureBuffer = await this.api.sign(hashArrayBuffer, sub);
+    const signatureBuffer = await this.api.sign(hashArrayBuffer);
 
     return signatureBuffer;
   }
