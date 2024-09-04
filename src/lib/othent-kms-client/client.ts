@@ -16,8 +16,8 @@ export class OthentKMSClient {
     this.auth0 = auth0;
   }
 
-  async createUser(idToken: string) {
-    return createUser(this.api, idToken);
+  async createUser(idToken?: string, importOnly?: boolean) {
+    return createUser(this.api, this.auth0, idToken, importOnly);
   }
 
   async decrypt(ciphertext: string | BinaryDataType, keyName: string) {

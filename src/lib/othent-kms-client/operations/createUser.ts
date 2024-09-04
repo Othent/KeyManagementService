@@ -1,6 +1,7 @@
 import { AxiosInstance } from "axios";
 import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
+import { OthentAuth0Client } from "../../auth/auth0";
 
 // New format:
 // export type CreateUserResponseData = boolean;
@@ -12,14 +13,23 @@ export interface CreateUserResponseData {
 
 export async function createUser(
   api: AxiosInstance,
-  idToken: string,
+  auth0: OthentAuth0Client,
+  idToken?: string,
+  importOnly?: boolean,
 ): Promise<boolean> {
+  const encodedData =
+    idToken ||
+    (await auth0.encodeToken({
+      keyName: "",
+      importOnly,
+    }));
+
   let createUserSuccess = false;
 
   try {
     const createUserResponse = await api.post<CreateUserResponseData>(
       "/create-user",
-      { encodedData: idToken } satisfies CommonEncodedRequestData,
+      { encodedData } satisfies CommonEncodedRequestData,
     );
 
     createUserSuccess = createUserResponse.data.data;

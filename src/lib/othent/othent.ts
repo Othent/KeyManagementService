@@ -64,6 +64,7 @@ import {
   PopupTimeoutError,
 } from "@auth0/auth0-spa-js";
 import { Buffer } from "buffer";
+import { testClientKeyGenerationAndWrapping } from "../othent-kms-client/operations/importKey";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
@@ -695,11 +696,13 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // We should now have a valid token, but potentially not the user details...
 
-    if (id_token && !userDetails) {
+    if (id_token && (!userDetails || !userDetails.walletAddress)) {
       // If that's the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
       // got to it to avoid making another call to `encodeToken()` / `getTokenSilently()`:
 
-      await this.api.createUser(id_token);
+      console.log("Creating import job...");
+
+      await this.api.createUser(id_token, true);
 
       // Lastly, we request a new token to update the cached user details and confirm that the `user_metadata` has been
       // correctly updated. Note we don't use as try-catch here, as if any error happens at this point, we just want to
@@ -710,6 +713,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
       id_token = response.id_token;
       userDetails = response.userDetails;
     }
+
+    testClientKeyGenerationAndWrapping(this.api.api, id_token, this.auth0);
 
     // We should now definitely have a valid token and user details:
 

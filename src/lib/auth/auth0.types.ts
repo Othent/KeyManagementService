@@ -204,7 +204,20 @@ export interface StoredUserDetails {
 // JWT token data / encodeToken():
 
 export interface BaseCryptoOperationData {
+  /**
+   * @deprecated We should use the Auth0's ID token `sub` property, which is already part of the token, rather than
+   * sending the `keyName` as a separated property.
+   */
   keyName: string;
+}
+
+export interface CreateUserOperationData extends BaseCryptoOperationData {
+  importOnly?: boolean;
+}
+
+export interface ImportKeysOperationData extends BaseCryptoOperationData {
+  wrappedSignKey: null | ArrayBuffer;
+  wrappedEncryptDecryptKey: null | ArrayBuffer;
 }
 
 export interface SignOperationData extends BaseCryptoOperationData {
@@ -223,6 +236,8 @@ export interface DecryptOperationData extends BaseCryptoOperationData {
 }
 
 export type CryptoOperationData =
+  | CreateUserOperationData
+  | ImportKeysOperationData
   | SignOperationData
   | EncryptOperationData
   | DecryptOperationData;
