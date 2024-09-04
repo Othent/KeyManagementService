@@ -205,13 +205,12 @@ export interface StoredUserDetails {
 
 export interface BaseCryptoOperationData {
   /**
-   * @deprecated We should use the Auth0's ID token `sub` property, which is already part of the token, rather than
-   * sending the `keyName` as a separated property.
+   * @deprecated
    */
-  keyName?: never;
+  keyName?: string;
 }
 
-// TODO: Rename fn to path and make sure it matches the backend paths. Also, move them to constants.
+// TODO: Rename fn param to path and make sure it matches the backend paths. Also, move them to constants.
 
 export interface CreateUserOperationData extends BaseCryptoOperationData {
   fn: "createUser";

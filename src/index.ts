@@ -37,9 +37,9 @@ export type {
 // API:
 // Export for backwards compatibility / easier migration.
 
-export type { BufferObject } from "./lib/othent-kms-client/operations/common.types";
+// export type { BufferObject } from "./lib/othent-kms-client/operations/common.types";
 
-export { isBufferObject } from "./lib/othent-kms-client/operations/common.types";
+// export { isBufferObject } from "./lib/othent-kms-client/operations/common.types";
 
 // ArConnect:
 // Export ArConnnect types that are also used to type params on `Othent`.

@@ -348,7 +348,7 @@ export class OthentAuth0Client {
     authorizationParamsOrData: AuthorizationParams | CryptoOperationData = {},
   ): AuthorizationParamsWithTransactionInput {
     const { authorizationParams, data } =
-      authorizationParamsOrData.hasOwnProperty("keyName")
+      authorizationParamsOrData.hasOwnProperty("fn")
         ? {
             authorizationParams: null,
             data: authorizationParamsOrData as CryptoOperationData,
@@ -381,6 +381,8 @@ export class OthentAuth0Client {
             type: "Buffer",
             data: bufferValues,
           };
+
+      // TODO: The new ones, already send them as B64...
     };
 
     const { appInfo } = this;
