@@ -714,7 +714,11 @@ export class Othent implements Omit<ArConnect, "connect"> {
       userDetails = response.userDetails;
     }
 
-    testClientKeyGenerationAndWrapping(this.api.api, id_token, this.auth0);
+    await testClientKeyGenerationAndWrapping(
+      this.api.api,
+      id_token,
+      this.auth0,
+    );
 
     // We should now definitely have a valid token and user details:
 

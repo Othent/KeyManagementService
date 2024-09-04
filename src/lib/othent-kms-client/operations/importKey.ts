@@ -143,6 +143,8 @@ export async function fetchImportJob(
 // IMPORT KEYS:
 
 import CryptoKeyVersionState = google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState;
+import { UserDetails } from "../../auth/auth0.types";
+import { sleep } from "../../utils/promises/promises.utils";
 
 interface ImportKeysResult {
   signKeyState: null | CryptoKeyVersionState;
@@ -195,6 +197,7 @@ interface ActivateKeysResult {
   encryptDecryptKeyState: null | CryptoKeyVersionState;
   signKeyVersion: string;
   encryptDecryptKeyVersion: string;
+  userDetails: null | UserDetails;
 }
 
 interface ActivateKeysResponseData {
@@ -481,10 +484,17 @@ export async function testClientKeyGenerationAndWrapping(
 
   // TODO: Wrap in while.
 
-  const MAX_RETRIES = 10;
+  const MAX_ATTEMPTS = 5;
   const INTERVAL = 1000;
 
-  const activateKeysResult = await activateKeys(api, idToken);
+  let attempt = 0;
+  let activateKeysResult: ActivateKeysResult | null = null;
 
-  console.log("activateKeysResult =", activateKeysResult);
+  do {
+    activateKeysResult = await activateKeys(api, idToken);
+
+    console.log("activateKeysResult =", activateKeysResult);
+
+    await sleep(INTERVAL);
+  } while (!activateKeysResult?.userDetails && ++attempt <= MAX_ATTEMPTS);
 }
