@@ -482,8 +482,6 @@ export async function testClientKeyGenerationAndWrapping(
 
   console.log("importKeysResult =", importKeysResult);
 
-  // TODO: Wrap in while.
-
   const MAX_ATTEMPTS = 5;
   const INTERVAL = 1000;
 
