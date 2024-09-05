@@ -46,7 +46,5 @@ export async function encrypt(
     throw new Error("Error encrypting on server.");
   }
 
-  console.log("ciphertext RESPONSE =", ciphertext);
-
   return ciphertext;
 }

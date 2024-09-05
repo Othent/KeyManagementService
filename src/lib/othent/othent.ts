@@ -1112,8 +1112,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
   async decrypt(ciphertext: BinaryDataType): Promise<Uint8Array> {
     const { sub } = await this.requireUserDataOrThrow();
 
-    console.log("decrypt.ciphertext =", ciphertext);
-
     const plaintextBuffer = await this.api.decrypt(ciphertext, sub);
 
     return plaintextBuffer;

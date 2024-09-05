@@ -30,8 +30,6 @@ export async function decrypt(
     ciphertext,
   });
 
-  console.log("ciphertext =", ciphertext);
-
   let plaintext: null | Uint8Array = null;
 
   try {
