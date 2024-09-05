@@ -60,6 +60,7 @@ export type Auth0Provider =
   | `apple`
   | `auth0`
   | `google-oauth2`
+  | `<LinkedIn>`
   | `twitter`
   | `<Meta>`
   | `<Twitch>`
@@ -71,6 +72,7 @@ export type Auth0ProviderLabel =
   | `Apple`
   | `E-Mail`
   | `Google`
+  | `LinkedIn`
   | `X`
   | `Meta`
   | `Twitch`
