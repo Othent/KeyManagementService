@@ -44,9 +44,10 @@ export class OthentAuth0Client {
     "google-oauth2": "Google",
 
     // TODO: Complete these values:
+    "<Twitch>": "Twitch",
     twitter: "X",
     "<Meta>": "Meta",
-    "<Twitch>": "Twitch",
+    "<LinkedIn>": "LinkedIn",
     github: "GitHub",
   };
 
@@ -101,14 +102,7 @@ export class OthentAuth0Client {
   ): Promise<UserDetails> {
     const { email = "", nickname = "", walletAddress } = idToken;
     const sub = (idToken.sub || "") as Auth0Sub;
-
     const authProvider = sub.split("|")[0] as Auth0Provider;
-
-    console.log(
-      sub,
-      authProvider,
-      OthentAuth0Client.PROVIDER_LABELS[authProvider],
-    );
 
     let walletAddressLabel: OthentWalletAddressLabel | null =
       await getAnsProfile(walletAddress);
@@ -117,6 +111,8 @@ export class OthentAuth0Client {
       const providerLabel =
         OthentAuth0Client.PROVIDER_LABELS[authProvider] || "Unknown Provider";
 
+      // We use `nickname` as a fallback here as, for some reason, the Twitter integration doesn't return the email,
+      // even thought the `email` option is selected in Auth0's integration:
       walletAddressLabel = `${providerLabel} (${email || (nickname ? `@${nickname}` : "")})`;
     }
 
