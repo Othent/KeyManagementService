@@ -35,20 +35,9 @@ import {
 } from "../config/config.types";
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
+import { PROVIDER_LABELS } from "./auth0.constants";
 
 export class OthentAuth0Client {
-  static PROVIDER_LABELS: Record<Auth0Provider, Auth0ProviderLabel> = {
-    apple: "Apple",
-    auth0: "E-Mail",
-    "google-oauth2": "Google",
-    // TODO: Complete these values:
-    "<LinkedIn>": "LinkedIn",
-    "<X>": "X",
-    "<Meta>": "Meta",
-    "<Twitch>": "Twitch",
-    github: "GitHub",
-  };
-
   private debug = false;
 
   private loginMethod: Auth0LogInMethod;
@@ -98,7 +87,7 @@ export class OthentAuth0Client {
   static async getUserDetails<D>(
     idToken: IdTokenWithData<D>,
   ): Promise<UserDetails> {
-    const { email = "", walletAddress } = idToken;
+    const { email = "", nickname = "", walletAddress } = idToken;
     const sub = (idToken.sub || "") as Auth0Sub;
     const authProvider = sub.split("|")[0] as Auth0Provider;
 
@@ -106,10 +95,11 @@ export class OthentAuth0Client {
       await getAnsProfile(walletAddress);
 
     if (!walletAddressLabel) {
-      const providerLabel =
-        OthentAuth0Client.PROVIDER_LABELS[authProvider] || "Unknown Provider";
+      const providerLabel = PROVIDER_LABELS[authProvider] || "Unknown Provider";
 
-      walletAddressLabel = `${providerLabel} (${email})`;
+      // We use `nickname` as a fallback here as, for some reason, the Twitter integration doesn't return the email,
+      // even thought the `email` option is selected in Auth0's integration:
+      walletAddressLabel = `${providerLabel} (${email || (nickname ? `@${nickname}` : "")})`;
     }
 
     return {

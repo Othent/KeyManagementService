@@ -61,7 +61,7 @@ export type Auth0Provider =
   | `auth0`
   | `google-oauth2`
   | `<LinkedIn>`
-  | `<X>`
+  | `twitter`
   | `<Meta>`
   | `<Twitch>`
   | `github`;
