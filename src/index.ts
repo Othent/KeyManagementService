@@ -34,6 +34,8 @@ export type {
   UserDetails,
 } from "./lib/auth/auth0.types";
 
+export { PROVIDER_LABELS } from "./lib/auth/auth0.constants";
+
 // API:
 // Export for backwards compatibility / easier migration.
 
