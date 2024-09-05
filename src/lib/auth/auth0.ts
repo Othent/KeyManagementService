@@ -36,6 +36,10 @@ import {
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
 import { PROVIDER_LABELS } from "./auth0.constants";
+import {
+  toLegacyBufferObject,
+  toLegacyBufferRecord,
+} from "../othent-kms-client/operations/common.types";
 
 export class OthentAuth0Client {
   private debug = false;
@@ -348,29 +352,26 @@ export class OthentAuth0Client {
           };
 
     const replacer = (key: string, value: any) => {
-      let bufferValues: number[] = [];
+      let buffer: Uint8Array;
 
       if (
         value instanceof Buffer ||
         value instanceof DataView ||
         ArrayBuffer.isView(value)
       ) {
-        bufferValues = Array.from(new Uint8Array(value.buffer));
+        buffer = new Uint8Array(value.buffer);
       } else if (value instanceof ArrayBuffer) {
-        bufferValues = Array.from(new Uint8Array(value));
+        buffer = new Uint8Array(value);
       } else {
         return value;
       }
 
-      // if key === 'data' then we are signing else we are encrypting / decrypting
+      // if key === 'data' then we are signing, otherwise is one of the other `CryptoOperationData`:
       return key === "data"
-        ? Object.fromEntries(Object.entries(bufferValues))
-        : {
-            type: "Buffer",
-            data: bufferValues,
-          };
+        ? toLegacyBufferRecord(buffer)
+        : toLegacyBufferObject(buffer);
 
-      // TODO: The new ones, already send them as B64...
+      // TODO: Send the new operations as B64String.
     };
 
     const { appInfo } = this;

@@ -2,19 +2,18 @@ import { OthentAuth0Client } from "../../auth/auth0";
 import { AxiosInstance } from "axios";
 import {
   CommonEncodedRequestData,
-  LegacyBufferData,
+  LegacyBufferObject,
   normalizeBufferDataWithNull,
 } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType } from "../../utils/arweaveUtils";
 
-// New format:
-// type EncryptResponseData = string;
+// Upcoming server response format:
+// type EncryptResponseData = B64String;
 
-// Old format:
-// TODO: Does the old server actually return plain strings?
+// Old server response format:
 interface EncryptResponseData {
-  data: string | LegacyBufferData;
+  data: LegacyBufferObject;
 }
 
 export async function encrypt(
@@ -36,6 +35,8 @@ export async function encrypt(
     const encryptResponse = await api.post<EncryptResponseData>("/encrypt", {
       encodedData,
     } satisfies CommonEncodedRequestData);
+
+    console.log(encryptResponse);
 
     ciphertext = normalizeBufferDataWithNull(encryptResponse.data.data);
   } catch (err) {

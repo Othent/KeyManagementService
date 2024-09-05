@@ -8,13 +8,12 @@ import {
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType } from "../../utils/arweaveUtils";
 
-// New format:
-// type DecryptResponseData = string;
+// Upcoming server response format:
+// type DecryptResponseData = B64String;
 
-// Old format:
-// TODO: Does the old server actually return plain strings?
+// Old server response format:
 interface DecryptResponseData {
-  data: string | LegacyBufferData;
+  data: string;
 }
 
 export async function decrypt(
@@ -36,6 +35,8 @@ export async function decrypt(
     const decryptResponse = await api.post<DecryptResponseData>("/decrypt", {
       encodedData,
     } satisfies CommonEncodedRequestData);
+
+    console.log(decryptResponse);
 
     plaintext = normalizeBufferDataWithNull(decryptResponse.data.data);
   } catch (err) {

@@ -1,9 +1,4 @@
-import {
-  B64String,
-  b64ToUint8Array,
-  B64UrlString,
-  stringToUint8Array,
-} from "../../utils/arweaveUtils";
+import { stringToUint8Array } from "../../utils/arweaveUtils";
 
 export interface CommonEncodedRequestData {
   encodedData: string;
@@ -12,15 +7,22 @@ export interface CommonEncodedRequestData {
 /**
  * @deprecated
  */
-type LegacyBufferRecord = Record<number, number>;
+export type LegacyBufferRecord = Record<number, number>;
 
 /**
  * @deprecated
  */
-interface LegacyBufferObject {
+export interface LegacyBufferObject {
   type: "Buffer";
   data: number[];
 }
+
+/**
+ * Alias of `LegacyBufferObject`.
+ *
+ * @deprecated
+ */
+export type BufferObject = LegacyBufferObject;
 
 /**
  * JSON-compatible representation of a Buffer.
@@ -28,16 +30,22 @@ interface LegacyBufferObject {
  */
 export type LegacyBufferData = LegacyBufferRecord | LegacyBufferObject;
 
-function isLegacyBufferObject(
+export function isLegacyBufferObject(
   legacyBufferData: LegacyBufferData,
 ): legacyBufferData is LegacyBufferObject {
-  return legacyBufferData.hasOwnProperty("type");
+  return (
+    !!legacyBufferData &&
+    typeof legacyBufferData === "object" &&
+    (legacyBufferData as LegacyBufferObject).type === "Buffer" &&
+    Array.isArray((legacyBufferData as LegacyBufferObject).data)
+  );
+}
 
-  /*
-  obj.type === "Buffer" &&
-  Array.isArray(obj.data) &&
-  typeof obj[0] === "number"
-  */
+/**
+ * Alias of `isLegacyBufferObject`.
+ */
+export function isBufferObject(obj: any): obj is BufferObject {
+  return isLegacyBufferObject(obj);
 }
 
 // TODO: This lacks support for B64String | B64UrlString as the old version might send `string` back (from `decrypt`):
@@ -56,4 +64,15 @@ export function normalizeBufferDataWithNull(
   }
 
   return new Uint8Array(Object.values(data));
+}
+
+export function toLegacyBufferRecord(buffer: Uint8Array): LegacyBufferRecord {
+  return Object.fromEntries(Object.entries(Array.from(buffer)));
+}
+
+export function toLegacyBufferObject(buffer: Uint8Array): LegacyBufferObject {
+  return {
+    type: "Buffer",
+    data: Array.from(buffer),
+  };
 }

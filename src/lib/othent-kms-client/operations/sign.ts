@@ -2,19 +2,18 @@ import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
 import {
   CommonEncodedRequestData,
-  LegacyBufferData,
+  LegacyBufferObject,
   normalizeBufferDataWithNull,
 } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType } from "../../utils/arweaveUtils";
 
-// New format:
-// type SignResponseData = string;
+// Upcoming server response format:
+// type SignResponseData = B64String;
 
-// Old format:
-// TODO: Does the old server actually return plain strings?
+// Old server response format:
 interface SignResponseData {
-  data: string | LegacyBufferData;
+  data: LegacyBufferObject;
 }
 
 export async function sign(
