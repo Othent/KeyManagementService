@@ -119,14 +119,14 @@ export async function fetchImportJob(
   auth0: OthentAuth0Client,
 ): Promise<ImportJob> {
   const encodedData = await auth0.encodeToken({
-    fn: "fetchImportJob",
+    path: Route.FETCH_IMPORT_JOB,
   });
 
   let importJob: ImportJob | null = null;
 
   try {
     const fetchImportJobResponse = await api.post<FetchImportJobResponseData>(
-      "/fetch-import-job",
+      Route.FETCH_IMPORT_JOB,
       {
         encodedData,
       } satisfies CommonEncodedRequestData,
@@ -150,6 +150,7 @@ export async function fetchImportJob(
 type CryptoKeyVersionState = string;
 import { UserDetails } from "../../auth/auth0.types";
 import { sleep } from "../../utils/promises/promises.utils";
+import { Route } from "./common.constants";
 
 interface ImportKeysResult {
   signKeyState: null | CryptoKeyVersionState;
@@ -167,7 +168,7 @@ export async function importKeys(
   wrappedEncryptDecryptKey: null | ArrayBuffer,
 ) {
   const encodedData = await auth0.encodeToken({
-    fn: "importKeys",
+    path: Route.IMPORT_KEYS,
     wrappedSignKey,
     wrappedEncryptDecryptKey,
   });
@@ -176,7 +177,7 @@ export async function importKeys(
 
   try {
     const importKeysResponse = await api.post<ImportKeysResponseData>(
-      "/import-keys",
+      Route.IMPORT_KEYS,
       {
         encodedData,
       } satisfies CommonEncodedRequestData,
@@ -213,14 +214,14 @@ export async function activateKeys(
   auth0: OthentAuth0Client,
 ) {
   const encodedData = await auth0.encodeToken({
-    fn: "activateKeys",
+    path: Route.ACTIVATE_KEYS,
   });
 
   let activateKeysResult: ActivateKeysResult | null = null;
 
   try {
     const activateKeysResponse = await api.post<ActivateKeysResponseData>(
-      "/activate-keys",
+      Route.ACTIVATE_KEYS,
       {
         encodedData,
       } satisfies CommonEncodedRequestData,

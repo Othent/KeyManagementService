@@ -3,10 +3,12 @@ import { OthentAuth0Client } from "../../auth/auth0";
 import {
   CommonEncodedRequestData,
   LegacyBufferData,
+  LegacyBufferObject,
   normalizeBufferDataWithNull,
 } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType } from "../../utils/arweaveUtils";
+import { Route } from "./common.constants";
 
 // Upcoming server response format:
 // type DecryptResponseData = B64String;
@@ -20,23 +22,18 @@ export async function decrypt(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
   ciphertext: string | BinaryDataType,
-  keyName: string,
 ): Promise<Uint8Array> {
-  // TODO: `ciphertext` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
   const encodedData = await auth0.encodeToken({
-    keyName,
-    fn: "decrypt",
+    path: Route.DECRYPT,
     ciphertext,
   });
 
   let plaintext: null | Uint8Array = null;
 
   try {
-    const decryptResponse = await api.post<DecryptResponseData>("/decrypt", {
+    const decryptResponse = await api.post<DecryptResponseData>(Route.DECRYPT, {
       encodedData,
     } satisfies CommonEncodedRequestData);
-
-    console.log(decryptResponse);
 
     plaintext = normalizeBufferDataWithNull(decryptResponse.data.data);
   } catch (err) {

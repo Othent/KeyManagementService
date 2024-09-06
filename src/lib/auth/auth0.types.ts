@@ -12,6 +12,7 @@ import {
   Auth0Strategy,
   OthentStorageKey,
 } from "../config/config.types";
+import { Route } from "../othent-kms-client/operations/common.constants";
 
 // OthentAuth0Client:
 
@@ -205,49 +206,38 @@ export interface StoredUserDetails {
 
 // JWT token data / encodeToken():
 
-export interface BaseCryptoOperationData {
-  /**
-   * @deprecated
-   */
-  keyName?: string;
+export interface BaseCryptoOperationData<P extends Route> {
+  path: P;
 }
 
-// TODO: Rename fn param to path and make sure it matches the backend paths. Also, move them to constants.
-
-export interface CreateUserOperationData extends BaseCryptoOperationData {
-  fn: "createUser";
+export interface CreateUserOperationData
+  extends BaseCryptoOperationData<Route.CREATE_USER> {
   importOnly?: boolean;
 }
 
-export interface FetchImportJobOperationData extends BaseCryptoOperationData {
-  fn: "fetchImportJob";
-}
+export type FetchImportJobOperationData =
+  BaseCryptoOperationData<Route.FETCH_IMPORT_JOB>;
 
-export interface ImportKeysOperationData extends BaseCryptoOperationData {
-  fn: "importKeys";
+export interface ImportKeysOperationData
+  extends BaseCryptoOperationData<Route.IMPORT_KEYS> {
   wrappedSignKey: null | ArrayBuffer;
   wrappedEncryptDecryptKey: null | ArrayBuffer;
 }
 
-export interface ActivateKeysOperationData extends BaseCryptoOperationData {
-  fn: "activateKeys";
-}
+export type ActivateKeysOperationData =
+  BaseCryptoOperationData<Route.ACTIVATE_KEYS>;
 
-export interface SignOperationData extends BaseCryptoOperationData {
-  fn: "sign";
-  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+export interface SignOperationData extends BaseCryptoOperationData<Route.SIGN> {
   data: string | BinaryDataType;
 }
 
-export interface EncryptOperationData extends BaseCryptoOperationData {
-  fn: "encrypt";
-  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+export interface EncryptOperationData
+  extends BaseCryptoOperationData<Route.ENCRYPT> {
   plaintext: string | BinaryDataType;
 }
 
-export interface DecryptOperationData extends BaseCryptoOperationData {
-  fn: "decrypt";
-  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+export interface DecryptOperationData
+  extends BaseCryptoOperationData<Route.DECRYPT> {
   ciphertext: string | BinaryDataType;
 }
 

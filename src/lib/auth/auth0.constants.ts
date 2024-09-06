@@ -12,3 +12,11 @@ export const PROVIDER_LABELS: Record<Auth0Provider, Auth0ProviderLabel> = {
   "<LinkedIn>": "LinkedIn",
   github: "GitHub",
 };
+
+export const CRYPTO_OPERATION_BINARY_DATA_KEYS = [
+  "wrappedSignKey",
+  "wrappedEncryptDecryptKey",
+  "data",
+  "plaintext",
+  "ciphertext",
+] as const;

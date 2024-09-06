@@ -1,9 +1,4 @@
-import {
-  Auth0Client,
-  CacheLocation,
-  createAuth0Client,
-  ICache,
-} from "@auth0/auth0-spa-js";
+import { Auth0Client, createAuth0Client } from "@auth0/auth0-spa-js";
 import {
   CryptoOperationData,
   AuthorizationParams,
@@ -15,7 +10,6 @@ import {
   StoredUserDetails,
   Auth0Sub,
   Auth0Provider,
-  Auth0ProviderLabel,
   OthentWalletAddressLabel,
 } from "./auth0.types";
 import {
@@ -35,11 +29,12 @@ import {
 } from "../config/config.types";
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
-import { PROVIDER_LABELS } from "./auth0.constants";
 import {
-  toLegacyBufferObject,
-  toLegacyBufferRecord,
-} from "../othent-kms-client/operations/common.types";
+  CRYPTO_OPERATION_BINARY_DATA_KEYS,
+  PROVIDER_LABELS,
+} from "./auth0.constants";
+import { binaryDataTypeOrStringTob64String } from "../utils/arweaveUtils";
+import { transactionInputReplacer } from "./auth0.utils";
 
 export class OthentAuth0Client {
   private debug = false;
@@ -340,7 +335,7 @@ export class OthentAuth0Client {
     authorizationParamsOrData: AuthorizationParams | CryptoOperationData = {},
   ): AuthorizationParamsWithTransactionInput {
     const { authorizationParams, data } =
-      authorizationParamsOrData.hasOwnProperty("fn")
+      authorizationParamsOrData.hasOwnProperty("path")
         ? {
             authorizationParams: null,
             data: authorizationParamsOrData as CryptoOperationData,
@@ -350,29 +345,6 @@ export class OthentAuth0Client {
               authorizationParamsOrData as AuthorizationParams,
             data: null,
           };
-
-    const replacer = (key: string, value: any) => {
-      let buffer: Uint8Array;
-
-      if (
-        value instanceof Buffer ||
-        value instanceof DataView ||
-        ArrayBuffer.isView(value)
-      ) {
-        buffer = new Uint8Array(value.buffer);
-      } else if (value instanceof ArrayBuffer) {
-        buffer = new Uint8Array(value);
-      } else {
-        return value;
-      }
-
-      // if key === 'data' then we are signing, otherwise is one of the other `CryptoOperationData`:
-      return key === "data"
-        ? toLegacyBufferRecord(buffer)
-        : toLegacyBufferObject(buffer);
-
-      // TODO: Send the new operations as B64String.
-    };
 
     const { appInfo } = this;
 
@@ -391,7 +363,10 @@ export class OthentAuth0Client {
 
     return {
       ...authorizationParams,
-      transaction_input: JSON.stringify(transactionInput, replacer),
+      transaction_input: JSON.stringify(
+        transactionInput,
+        transactionInputReplacer,
+      ),
     } satisfies AuthorizationParamsWithTransactionInput;
   }
 
@@ -406,10 +381,24 @@ export class OthentAuth0Client {
 
     if (this.debug) {
       try {
-        console.log("getTokenSilently() =", {
-          ...authorizationParams,
-          transaction_input: JSON.parse(authorizationParams.transaction_input),
-        });
+        const parsedTransactionInput = JSON.parse(
+          authorizationParams.transaction_input,
+        );
+
+        if (
+          Object.keys(authorizationParams).length === 1 &&
+          Object.keys(authorizationParams)[0] === "transaction_input"
+        ) {
+          console.log(
+            "getTokenSilently().transaction_input =",
+            parsedTransactionInput,
+          );
+        } else {
+          console.log("getTokenSilently() =", {
+            ...authorizationParams,
+            transaction_input: parsedTransactionInput,
+          });
+        }
       } catch (err) {
         console.error("Error logging/parsing `authorizationParams`:", err);
       }

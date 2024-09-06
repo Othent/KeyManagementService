@@ -2,12 +2,14 @@ import { AxiosInstance } from "axios";
 import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { OthentAuth0Client } from "../../auth/auth0";
+import { Route } from "./common.constants";
 
 export interface CreateUserOptions {
   importOnly?: boolean;
 }
 
 // New format:
+// TODO: Return the created user...
 // export type CreateUserResponseData = boolean;
 
 // Old format:
@@ -21,7 +23,7 @@ export async function createUser(
   options: CreateUserOptions,
 ): Promise<boolean> {
   const encodedData = await auth0.encodeToken({
-    fn: "createUser",
+    path: Route.CREATE_USER,
     ...options,
   });
 
@@ -29,7 +31,7 @@ export async function createUser(
 
   try {
     const createUserResponse = await api.post<CreateUserResponseData>(
-      "/create-user",
+      Route.CREATE_USER,
       { encodedData } satisfies CommonEncodedRequestData,
     );
 

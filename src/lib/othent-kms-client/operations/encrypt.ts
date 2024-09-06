@@ -7,6 +7,7 @@ import {
 } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { BinaryDataType } from "../../utils/arweaveUtils";
+import { Route } from "./common.constants";
 
 // Upcoming server response format:
 // type EncryptResponseData = B64String;
@@ -20,23 +21,18 @@ export async function encrypt(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
   plaintext: string | BinaryDataType,
-  keyName: string,
 ): Promise<Uint8Array> {
-  // TODO: `plaintext` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
   const encodedData = await auth0.encodeToken({
-    keyName,
-    fn: "encrypt",
+    path: Route.ENCRYPT,
     plaintext,
   });
 
   let ciphertext: null | Uint8Array = null;
 
   try {
-    const encryptResponse = await api.post<EncryptResponseData>("/encrypt", {
+    const encryptResponse = await api.post<EncryptResponseData>(Route.ENCRYPT, {
       encodedData,
     } satisfies CommonEncodedRequestData);
-
-    console.log(encryptResponse);
 
     ciphertext = normalizeBufferDataWithNull(encryptResponse.data.data);
   } catch (err) {

@@ -20,21 +20,21 @@ export class OthentKMSClient {
     return createUser(this.api, this.auth0, options);
   }
 
-  async decrypt(ciphertext: string | BinaryDataType, sub: string) {
-    return decrypt(this.api, this.auth0, ciphertext, sub);
+  async decrypt(ciphertext: string | BinaryDataType) {
+    return decrypt(this.api, this.auth0, ciphertext);
   }
 
-  async encrypt(plaintext: string | BinaryDataType, sub: string) {
-    return encrypt(this.api, this.auth0, plaintext, sub);
+  async encrypt(plaintext: string | BinaryDataType) {
+    return encrypt(this.api, this.auth0, plaintext);
   }
 
-  async sign(data: string | BinaryDataType, sub: string) {
-    return sign(this.api, this.auth0, data, sub);
+  async sign(data: string | BinaryDataType) {
+    return sign(this.api, this.auth0, data);
   }
 
-  getSignerSignFn(sub: string) {
+  getSignerSignFn() {
     return async (data: Uint8Array) => {
-      const signatureBuffer = await this.sign(data, sub);
+      const signatureBuffer = await this.sign(data);
 
       return signatureBuffer;
     };
