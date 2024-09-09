@@ -2,19 +2,15 @@ import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
 import {
   CommonEncodedRequestData,
-  LegacyBufferObject,
   normalizeBufferDataWithNull,
 } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { BinaryDataType } from "../../utils/arweaveUtils";
+import { B64String, BinaryDataType } from "../../utils/arweaveUtils";
 import { Route } from "./common.constants";
 
-// Upcoming server response format:
-// type SignResponseData = B64String;
-
-// Old server response format:
 interface SignResponseData {
-  data: LegacyBufferObject;
+  data: B64String;
+  // TODO: New shape: signatureData: B64String;
 }
 
 export async function sign(

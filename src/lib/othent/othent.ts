@@ -3,10 +3,17 @@ import {
   B64UrlString,
   BinaryDataType,
   binaryDataTypeOrStringToBinaryDataType,
+  binaryDataTypeTob64Url,
   hash,
+  uint8ArrayTob64,
   uint8ArrayTob64Url,
 } from "../utils/arweaveUtils";
-import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
+import {
+  createData,
+  DataItem as DataItemClass,
+  DataItemCreateOptions,
+  Signer,
+} from "warp-arbundles";
 import { OthentKMSClient } from "../othent-kms-client/client";
 import { UserDetails } from "../auth/auth0.types";
 import {
@@ -118,9 +125,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/constructor|constructor() docs}
    */
   constructor(options: OthentOptions = DEFAULT_OTHENT_OPTIONS) {
-    console.clear();
-    console.log("TESTING IMPORT", new Date().toUTCString());
-
     // Buffer polyfill:
 
     if (!globalThis.Buffer) {
@@ -1172,10 +1176,20 @@ export class Othent implements Omit<ArConnect, "connect"> {
       tags: this.addCommonTags(tags),
     };
 
-    const dataItemInstance = createData(data, signer, opts);
+    const dataItemInstance = createData(
+      typeof data === "string" ? data : new Uint8Array(data),
+      signer,
+      opts,
+    );
 
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
     await dataItemInstance.sign(signer);
+
+    const dt = new DataItemClass(
+      Buffer.from(Array.from(dataItemInstance.getRaw())),
+    );
+
+    console.log(dt.isSigned, await dt.isValid);
 
     return dataItemInstance.getRaw().buffer;
   }
@@ -1260,6 +1274,23 @@ export class Othent implements Omit<ArConnect, "connect"> {
       hashArrayBuffer,
     );
 
+    console.log({
+      plaintext: new TextDecoder().decode(data as Uint8Array),
+      plaintextHash: uint8ArrayTob64(hashArrayBuffer as Uint8Array),
+      plaintextHashBuffer: hashArrayBuffer,
+      publicKey,
+      signature: uint8ArrayTob64(signature as Uint8Array),
+    });
+
+    /*
+    const isSignatureValid = crypto.verify(
+      ASYMMETRIC_ALGORITHM,
+      Buffer.from(originalPlaintext),
+      publicKey,
+      b64ToUint8Array(signature as B64String),
+    );
+    */
+
     return result;
   }
 
@@ -1331,5 +1362,11 @@ export class Othent implements Omit<ArConnect, "connect"> {
     );
 
     return Promise.resolve(this.tokens.has(id));
+  }
+
+  // DEVELOPMENT:
+
+  overridePublicKey(publicKeyPEM: string) {
+    this.auth0.overridePublicKey(publicKeyPEM);
   }
 }

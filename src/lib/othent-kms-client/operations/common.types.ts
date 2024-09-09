@@ -1,4 +1,8 @@
-import { stringToUint8Array } from "../../utils/arweaveUtils";
+import {
+  B64String,
+  b64ToUint8Array,
+  B64UrlString,
+} from "../../utils/arweaveUtils";
 
 export interface CommonEncodedRequestData {
   encodedData: string;
@@ -51,12 +55,17 @@ export function isBufferObject(obj: any): obj is BufferObject {
 // TODO: This lacks support for B64String | B64UrlString as the old version might send `string` back (from `decrypt`):
 
 export function normalizeBufferDataWithNull(
-  data?: LegacyBufferRecord | LegacyBufferObject | string | null,
+  data?:
+    | LegacyBufferRecord
+    | LegacyBufferObject
+    | B64String
+    | B64UrlString
+    | null,
 ) {
   if (data === null || data === undefined) return null;
 
   if (typeof data === "string") {
-    return stringToUint8Array(data);
+    return b64ToUint8Array(data);
   }
 
   if (isLegacyBufferObject(data)) {

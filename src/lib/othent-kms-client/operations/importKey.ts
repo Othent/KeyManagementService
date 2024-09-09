@@ -264,14 +264,14 @@ function base64ToArrayBuffer(b64: string) {
 type PEM =
   `-----BEGIN PRIVATE KEY-----\n${B64String}\n-----END PRIVATE KEY-----`;
 
-function pemToUint8Array(pem: PEM) {
-  const keyMaterial = pem
+export function pemToUint8Array(pem: PEM) {
+  const pemBufferString = pem
     .replaceAll("\n", "")
     .replace("-----BEGIN PUBLIC KEY-----", "")
     .replace("-----END PUBLIC KEY-----", "") as B64String;
 
-  // return base64ToArrayBuffer(keyMaterial);
-  return b64ToUint8Array(keyMaterial);
+  // return base64ToArrayBuffer(pemBufferString);
+  return b64ToUint8Array(pemBufferString);
 }
 
 async function cryptoKeyFromPEM(pem: PEM) {

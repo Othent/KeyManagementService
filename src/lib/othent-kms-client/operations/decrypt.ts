@@ -2,20 +2,15 @@ import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
 import {
   CommonEncodedRequestData,
-  LegacyBufferData,
-  LegacyBufferObject,
   normalizeBufferDataWithNull,
 } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { BinaryDataType } from "../../utils/arweaveUtils";
+import { B64String, BinaryDataType } from "../../utils/arweaveUtils";
 import { Route } from "./common.constants";
 
-// Upcoming server response format:
-// type DecryptResponseData = B64String;
-
-// Old server response format:
 interface DecryptResponseData {
-  data: string;
+  data: B64String;
+  // TODO: New shape: decryptedData: B64String;
 }
 
 export async function decrypt(
