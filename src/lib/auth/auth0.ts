@@ -29,15 +29,15 @@ import {
 } from "../config/config.types";
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
-import {
-  CRYPTO_OPERATION_BINARY_DATA_KEYS,
-  PROVIDER_LABELS,
-} from "./auth0.constants";
-import { binaryDataTypeOrStringTob64String } from "../utils/arweaveUtils";
+import { PROVIDER_LABELS } from "./auth0.constants";
+import { B64UrlString, uint8ArrayTob64Url } from "../utils/arweaveUtils";
 import { transactionInputReplacer } from "./auth0.utils";
+import { pemToUint8Array } from "../othent-kms-client/operations/importKey";
 
 export class OthentAuth0Client {
   private debug = false;
+
+  private overriddenPublicKey: B64UrlString | null = null;
 
   private loginMethod: Auth0LogInMethod;
 
@@ -75,17 +75,15 @@ export class OthentAuth0Client {
     // value as refresh tokens have a much longer expiration, 15 days typically.
 
     return !!(
-      (idToken && idToken.sub)
-      // TODO: Just for the test:
-      // idToken.owner &&
-      // idToken.walletAddress &&
-      // idToken.authSystem === "KMS"
+      idToken &&
+      idToken.sub &&
+      idToken.owner &&
+      idToken.walletAddress &&
+      idToken.authSystem === "KMS"
     );
   }
 
-  static async getUserDetails<D>(
-    idToken: IdTokenWithData<D>,
-  ): Promise<UserDetails> {
+  async getUserDetails<D>(idToken: IdTokenWithData<D>): Promise<UserDetails> {
     const { email = "", nickname = "", walletAddress } = idToken;
     const sub = (idToken.sub || "") as Auth0Sub;
     const authProvider = sub.split("|")[0] as Auth0Provider;
@@ -116,7 +114,7 @@ export class OthentAuth0Client {
       updatedAt: idToken.updated_at || "",
       email,
       emailVerified: !!idToken.email_verified,
-      owner: idToken.owner,
+      owner: this.overriddenPublicKey || idToken.owner,
       walletAddress: idToken.walletAddress,
       walletAddressLabel,
       authSystem: idToken.authSystem,
@@ -317,7 +315,7 @@ export class OthentAuth0Client {
   ): Promise<UserDetails | null> {
     const nextUserDetails: UserDetails | null =
       idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
-        ? await OthentAuth0Client.getUserDetails(idToken)
+        ? await this.getUserDetails(idToken)
         : null;
 
     return this.setUserDetails(nextUserDetails);
@@ -554,5 +552,13 @@ export class OthentAuth0Client {
 
   getCachedUserEmail() {
     return this.userDetails?.email || null;
+  }
+
+  // DEVELOPMENT:
+
+  async overridePublicKey(publicKeyPEM: string) {
+    this.overriddenPublicKey = uint8ArrayTob64Url(
+      pemToUint8Array(publicKeyPEM as any),
+    );
   }
 }
