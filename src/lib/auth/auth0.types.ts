@@ -67,7 +67,7 @@ export type Auth0Provider =
   | `<Twitch>`
   | `github`;
 
-export type Auth0Sub = `${Auth0Provider}|(${string})`;
+export type Auth0Sub = `${Auth0Provider}|${string}`;
 
 export type Auth0ProviderLabel =
   | `Apple`

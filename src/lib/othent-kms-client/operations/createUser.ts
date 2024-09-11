@@ -3,31 +3,27 @@ import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { OthentAuth0Client } from "../../auth/auth0";
 import { Route } from "./common.constants";
+import { UserDetails } from "../../auth/auth0.types";
 
 export interface CreateUserOptions {
   importOnly?: boolean;
 }
 
-// New format:
-// TODO: Return the created user...
-// export type CreateUserResponseData = boolean;
-
-// Old format:
 interface CreateUserResponseData {
-  data: boolean;
+  userDetails: UserDetails | null;
 }
 
 export async function createUser(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
   options: CreateUserOptions,
-): Promise<boolean> {
+): Promise<UserDetails> {
   const encodedData = await auth0.encodeToken({
     path: Route.CREATE_USER,
     ...options,
   });
 
-  let createUserSuccess = false;
+  let userDetails: UserDetails | null = null;
 
   try {
     const createUserResponse = await api.post<CreateUserResponseData>(
@@ -35,14 +31,14 @@ export async function createUser(
       { encodedData } satisfies CommonEncodedRequestData,
     );
 
-    createUserSuccess = createUserResponse.data.data;
+    userDetails = createUserResponse.data.userDetails;
   } catch (err) {
     throw parseErrorResponse(err);
   }
 
-  if (!createUserSuccess) {
+  if (!userDetails) {
     throw new Error("Error creating user on server.");
   }
 
-  return true;
+  return userDetails;
 }

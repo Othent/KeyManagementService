@@ -3,7 +3,6 @@ import {
   B64UrlString,
   BinaryDataType,
   binaryDataTypeOrStringToBinaryDataType,
-  binaryDataTypeTob64Url,
   hash,
   uint8ArrayTob64,
   uint8ArrayTob64Url,
@@ -38,7 +37,6 @@ import {
   BaseEventListener,
   EventListenersHandler,
 } from "../utils/events/event-listener-handler";
-import { toBuffer } from "../utils/bufferUtils";
 import { isPromise } from "../utils/promises/promises.utils";
 import axios from "axios";
 import type Transaction from "arweave/web/lib/transaction";
@@ -72,6 +70,7 @@ import {
 } from "@auth0/auth0-spa-js";
 import { Buffer } from "buffer";
 import { testClientKeyGenerationAndWrapping } from "../othent-kms-client/operations/importKey";
+import { toBuffer } from "../utils/bufferUtils";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
@@ -956,7 +955,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
    */
   async sign(transaction: Transaction): Promise<Transaction> {
     const { publicKey } = await this.requireUserDataOrThrow();
-
     const arweave = initArweave(this.gatewayConfig);
 
     // // Using transaction.tags won't work as those wound still be encoded:
@@ -974,6 +972,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
       data: transaction.data,
       owner: publicKey,
       reward: transaction.reward,
+      // TODO: These were missing:
+      target: transaction.target,
+      quantity: transaction.quantity,
+      format: transaction.format,
     });
 
     tags.forEach((tagData) => {
@@ -1170,6 +1172,35 @@ export class Othent implements Omit<ArConnect, "connect"> {
       // Note we don't provide `verify` as it's not used anyway:
       // verify: () => true,
     };
+
+    /*
+    const original = this.crypto.subtle.importKey.bind(this.crypto.subtle) as Function;
+
+    this.crypto.subtle.importKey = (...args: any[]) => {
+      console.log("ARGS =", args);
+
+      return original(...args);
+    }
+
+    const publicJwk = {
+      kty: "RSA",
+      e: "AQAB",
+      n: publicKey,
+    } as const;
+
+    this.crypto.subtle.importKey(
+      "jwk",
+      publicJwk,
+      {
+        name: "RSA-PSS",
+        hash: {
+          name: "SHA-256",
+        },
+      },
+      false,
+      ["verify"]
+    );
+    */
 
     const opts: DataItemCreateOptions = {
       ...options,

@@ -119,7 +119,7 @@ export class OthentAuth0Client {
       walletAddressLabel,
       authSystem: idToken.authSystem,
       authProvider,
-    };
+    } satisfies UserDetails;
   }
 
   constructor({
