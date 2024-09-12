@@ -9,8 +9,7 @@ import { B64String, BinaryDataType } from "../../utils/arweaveUtils";
 import { Route } from "./common.constants";
 
 interface EncryptResponseData {
-  data: B64String;
-  // TODO: New shape: encryptedData: B64String;
+  encryptedData: B64String;
 }
 
 export async function encrypt(
@@ -23,21 +22,23 @@ export async function encrypt(
     plaintext,
   });
 
-  let ciphertext: null | Uint8Array = null;
+  let encryptedData: null | Uint8Array = null;
 
   try {
     const encryptResponse = await api.post<EncryptResponseData>(Route.ENCRYPT, {
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    ciphertext = normalizeBufferDataWithNull(encryptResponse.data.data);
+    encryptedData = normalizeBufferDataWithNull(
+      encryptResponse.data.encryptedData,
+    );
   } catch (err) {
     throw parseErrorResponse(err);
   }
 
-  if (ciphertext === null) {
+  if (encryptedData === null) {
     throw new Error("Error encrypting on server.");
   }
 
-  return ciphertext;
+  return encryptedData;
 }

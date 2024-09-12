@@ -716,21 +716,21 @@ export class Othent implements Omit<ArConnect, "connect"> {
       console.log("Creating user & import job...");
 
       // TODO: What if the user was already created but the key import process wasn't completed?
-      await this.api.createUser({ importOnly });
+      const idTokenWithData = await this.api.createUser({ importOnly });
 
       // Lastly, we request a new token to update the cached user details and confirm that the `user_metadata` has been
       // correctly updated. Note we don't use as try-catch here, as if any error happens at this point, we just want to
       // throw it.
 
-      const response = await this.auth0.getTokenSilently();
-
-      id_token = response.id_token;
-      userDetails = response.userDetails;
+      if (idTokenWithData) {
+        userDetails = await this.auth0.getUserDetails(idTokenWithData);
+      }
     }
 
-    // TODO: Do not reuse the same id_token here as it has been used already in createUser()!
-    if (importOnly)
-      await testClientKeyGenerationAndWrapping(this.api.api, this.auth0);
+    // Import keys PoC:
+    // if (importOnly) {
+    //   await testClientKeyGenerationAndWrapping(this.api.api, this.auth0);
+    // }
 
     // We should now definitely have a valid token and user details:
 

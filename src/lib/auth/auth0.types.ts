@@ -43,12 +43,14 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
 
 // User JWT data:
 
-export interface IdTokenWithData<D = void> extends IdToken {
+export interface UserMetadata {
   // Custom from Auth0's Add User Metadata action:
   owner: B64UrlString; // Public key derived from `sub`.
   walletAddress: B64UrlString; // Wallet address derived from `owner`.
   authSystem: "KMS";
+}
 
+export interface IdTokenWithData<D = void> extends IdToken, UserMetadata {
   // Extra data also added to the token in Add User Metadata action when calling functions other than createUser:
   data: void extends D ? never : D;
 }

@@ -9,8 +9,7 @@ import { B64String, BinaryDataType } from "../../utils/arweaveUtils";
 import { Route } from "./common.constants";
 
 interface SignResponseData {
-  data: B64String;
-  // TODO: New shape: signatureData: B64String;
+  signature: B64String;
 }
 
 export async function sign(
@@ -30,7 +29,7 @@ export async function sign(
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    signature = normalizeBufferDataWithNull(signResponse.data.data);
+    signature = normalizeBufferDataWithNull(signResponse.data.signature);
   } catch (err) {
     throw parseErrorResponse(err);
   }
