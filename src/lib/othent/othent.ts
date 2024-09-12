@@ -713,8 +713,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
       // If that's the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
       // got to it to avoid making another call to `encodeToken()` / `getTokenSilently()`:
 
-      console.log("Creating user & import job...");
-
       // TODO: What if the user was already created but the key import process wasn't completed?
       const idTokenWithData = await this.api.createUser({ importOnly });
 
@@ -1207,20 +1205,10 @@ export class Othent implements Omit<ArConnect, "connect"> {
       tags: this.addCommonTags(tags),
     };
 
-    const dataItemInstance = createData(
-      typeof data === "string" ? data : new Uint8Array(data),
-      signer,
-      opts,
-    );
+    const dataItemInstance = createData(data, signer, opts);
 
     // DataItem.sign() sets the DataItem's `id` property and returns its `rawId`:
     await dataItemInstance.sign(signer);
-
-    const dt = new DataItemClass(
-      Buffer.from(Array.from(dataItemInstance.getRaw())),
-    );
-
-    console.log(dt.isSigned, await dt.isValid);
 
     return dataItemInstance.getRaw().buffer;
   }
@@ -1304,23 +1292,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
       binaryDataTypeOrStringToBinaryDataType(signature),
       hashArrayBuffer,
     );
-
-    console.log({
-      plaintext: new TextDecoder().decode(data as Uint8Array),
-      plaintextHash: uint8ArrayTob64(hashArrayBuffer as Uint8Array),
-      plaintextHashBuffer: hashArrayBuffer,
-      publicKey,
-      signature: uint8ArrayTob64(signature as Uint8Array),
-    });
-
-    /*
-    const isSignatureValid = crypto.verify(
-      ASYMMETRIC_ALGORITHM,
-      Buffer.from(originalPlaintext),
-      publicKey,
-      b64ToUint8Array(signature as B64String),
-    );
-    */
 
     return result;
   }
