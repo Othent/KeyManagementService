@@ -64,6 +64,7 @@ import {
 } from "@auth0/auth0-spa-js";
 import { Buffer } from "buffer";
 import { toBuffer } from "../utils/bufferUtils";
+import { ServerInfoOptions } from "../othent-kms-client/operations/status";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
@@ -1376,7 +1377,11 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   // DEVELOPMENT:
 
-  overridePublicKey(publicKeyPEM: string) {
+  __overridePublicKey(publicKeyPEM: string) {
     this.auth0.overridePublicKey(publicKeyPEM);
+  }
+
+  __getServerInfo(options?: ServerInfoOptions) {
+    return this.api.serverInfo(options);
   }
 }

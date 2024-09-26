@@ -3,6 +3,7 @@ import { createUser, CreateUserOptions } from "./operations/createUser";
 import { decrypt } from "./operations/decrypt";
 import { encrypt } from "./operations/encrypt";
 import { sign } from "./operations/sign";
+import { serverInfo, ServerInfoOptions } from "./operations/status";
 import { OthentAuth0Client } from "../auth/auth0";
 import { BinaryDataType } from "../utils/arweaveUtils";
 
@@ -14,6 +15,10 @@ export class OthentKMSClient {
   constructor(baseURL: string, auth0: OthentAuth0Client) {
     this.api = axios.create({ baseURL });
     this.auth0 = auth0;
+  }
+
+  async serverInfo(options?: ServerInfoOptions) {
+    return serverInfo(this.api, this.auth0, options);
   }
 
   async createUser(options: CreateUserOptions) {
