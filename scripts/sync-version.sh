@@ -6,7 +6,7 @@ if [ "$npm_lifecycle_event" == "version" ] && [ -z "$packageVersionFromNPM" ]; t
     exit 1
 fi
 
-packageVersionFromJSON=$(node -p -e "require('./package.json').version")
+packageVersionFromJSON=$(node -p "require('./package.json').version")
 
 packageVersion="${packageVersion:-$packageVersionFromJSON}"
 
@@ -27,4 +27,4 @@ sed -i -e "s/CLIENT_VERSION = \".*\"/CLIENT_VERSION = \"$packageVersion\"/" ./sr
 # -i = in-place edit
 # Note there's no g flag used in the regular expression to make sure only one line is affected (just in case).
 
-git update-index --again
+git add ./src/lib/config/config.constants.ts

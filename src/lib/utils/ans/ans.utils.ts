@@ -5,7 +5,7 @@ import { ANSDomain } from "../../auth/auth0.types";
 
 // Note this type is incomplete. Only the properties we care about in `getAnsProfile` have been typed:
 export interface ANSContractState {
-  balances: {
+  balances?: {
     address: B64UrlString;
     ownedDomains: {
       domain: string;
@@ -34,9 +34,10 @@ export async function getAnsProfile(
       },
     );
 
-    const balanceMatch = response.data.balances.find(
+    const balanceMatch = (response.data.balances || []).find(
       (balance) => balance.address === address,
     );
+
     const domain = balanceMatch
       ? balanceMatch.primary_domain ||
         balanceMatch.ownedDomains[0].domain ||

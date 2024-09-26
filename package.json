@@ -33,7 +33,7 @@
     "test": "echo \"Warning: no test specified\"",
     "prettier": "prettier --write .",
     "preversion": "pnpm test",
-    "version": "bash ./scripts/sync-version.sh && pnpm run build && git add .",
+    "version": "bash ./scripts/sync-version.sh && pnpm run build",
     "postversion": "git push && git push --tags",
     "prepare": "husky"
   },
@@ -84,6 +84,10 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
+  },
+  "engines": {
+    "node": ">=20.17.0 <21 || >=22 <23 || >=24 <25",
+    "pnpm": ">=9.0.0"
   },
   "lint-staged": {
     "*": [
