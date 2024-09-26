@@ -969,8 +969,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
       owner: publicKey,
       reward: transaction.reward,
 
-      // TODO: We could consider filling this in automatically from `GET /tx_anchor`:
-      last_tx: transaction.last_tx,
+      // This value is added automatically when creating a transaction, so instead of propagating the one from the one
+      // the user sends, we'll just leave it to the new `createTransaction` to fill this in:
+      // last_tx: transaction.last_tx,
 
       // To transfer AR:
       target: transaction.target,
@@ -1028,7 +1029,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // Delegate the DataItem creation and signing to `signDataItem`:
     const signedDataItemBuffer = await this.signDataItem({
-      anchor: transaction.last_tx,
+      // Not used for now as `transaction.last_tx` is not 32 bytes, as required by `DataItem`:
+      // anchor: transaction.last_tx,
       target: transaction.target,
       data: transaction.data,
       tags: transactionTags,
