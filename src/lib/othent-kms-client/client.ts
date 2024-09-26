@@ -3,7 +3,7 @@ import { createUser, CreateUserOptions } from "./operations/createUser";
 import { decrypt } from "./operations/decrypt";
 import { encrypt } from "./operations/encrypt";
 import { sign } from "./operations/sign";
-import { serverInfo, ServerInfoOptions } from "./operations/status";
+import { serverInfo, ServerInfoOptions } from "./operations/server-info";
 import { OthentAuth0Client } from "../auth/auth0";
 import { BinaryDataType } from "../utils/arweaveUtils";
 

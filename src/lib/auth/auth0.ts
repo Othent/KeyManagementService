@@ -32,7 +32,7 @@ import { getAnsProfile } from "../utils/ans/ans.utils";
 import { PROVIDER_LABELS } from "./auth0.constants";
 import { B64UrlString, uint8ArrayTob64Url } from "../utils/arweaveUtils";
 import { transactionInputReplacer } from "./auth0.utils";
-import { pemToUint8Array } from "../othent-kms-client/operations/importKey";
+import { pemToUint8Array } from "../othent-kms-client/operations/import-key";
 
 export class OthentAuth0Client {
   private debug = false;

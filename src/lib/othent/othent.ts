@@ -64,7 +64,7 @@ import {
 } from "@auth0/auth0-spa-js";
 import { Buffer } from "buffer";
 import { toBuffer } from "../utils/bufferUtils";
-import { ServerInfoOptions } from "../othent-kms-client/operations/status";
+import { ServerInfoOptions } from "../othent-kms-client/operations/server-info";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
