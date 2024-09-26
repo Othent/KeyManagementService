@@ -31,7 +31,6 @@ import {
   BaseEventListener,
   EventListenersHandler,
 } from "../utils/events/event-listener-handler";
-import { toBuffer } from "../utils/bufferUtils";
 import { isPromise } from "../utils/promises/promises.utils";
 import axios from "axios";
 import type Transaction from "arweave/web/lib/transaction";
@@ -64,6 +63,8 @@ import {
   PopupTimeoutError,
 } from "@auth0/auth0-spa-js";
 import { Buffer } from "buffer";
+import { toBuffer } from "../utils/bufferUtils";
+import { ServerInfoOptions } from "../othent-kms-client/operations/server-info";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
@@ -654,6 +655,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
         // well, `logIn()` will internally call `getTokenSilently()` again after
         // successful authentication, and return a valid token with the user data:
 
+        // TODO: Check if the `getTokenSilently` inside `logIn` can be removed (it might be redundant, particularly on the redirect flow):
         const response = await this.auth0.logIn();
 
         id_token = response.id_token;
@@ -695,21 +697,35 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // We should now have a valid token, but potentially not the user details...
 
-    if (id_token && !userDetails) {
+    // TODO: This check needs to be improved. In the production version, this should:
+    // - Redirect users to a popup / iframe where they can generate and get their keys and learn about them.
+    // - Make sure this works for new users and also for users that did not complete the key generation/import step before.
+
+    const importOnly = false;
+
+    if (id_token && !userDetails?.walletAddress) {
       // If that's the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
       // got to it to avoid making another call to `encodeToken()` / `getTokenSilently()`:
 
-      await this.api.createUser(id_token);
+      // TODO: If the user was already created but the key creation process didn't work properly, or if the
+      // import process wasn't completed, this flow won't work as expected:
 
-      // Lastly, we request a new token to update the cached user details and confirm that the `user_metadata` has been
-      // correctly updated. Note we don't use as try-catch here, as if any error happens at this point, we just want to
-      // throw it.
+      const idTokenWithData = await this.api.createUser({ importOnly });
 
-      const response = await this.auth0.getTokenSilently();
+      // The `createUser` call above returns the updated user details (as `IdTokenWithData<null>`), so there's no need
+      // request a new token to update the cached user details. Instead, we just extract the `UserDetails` from the API
+      // response. Note we don't use as try-catch here, as if any error happens at this point, we just want to throw it.
 
-      id_token = response.id_token;
-      userDetails = response.userDetails;
+      if (idTokenWithData) {
+        userDetails = await this.auth0.getUserDetails(idTokenWithData);
+      }
     }
+
+    // TODO: Finish the import keys PoC below:
+
+    // if (importOnly) {
+    //   await testClientKeyGenerationAndWrapping(this.api.api, this.auth0);
+    // }
 
     // We should now definitely have a valid token and user details:
 
@@ -931,13 +947,13 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @returns A Promise containing a new signed transaction.
    *
    * @see {@link https://docs.othent.io/js-sdk-api/sign|sign() docs}
+   * @see {@link https://docs.arweave.org/developers/arweave-node-server/http-api#transaction-format|Transaction Format docs}
    */
   async sign(transaction: Transaction): Promise<Transaction> {
-    const { sub, publicKey } = await this.requireUserDataOrThrow();
-
+    const { publicKey } = await this.requireUserDataOrThrow();
     const arweave = initArweave(this.gatewayConfig);
 
-    // // Using transaction.tags won't work as those wound still be encoded:
+    // Using transaction.tags won't work as those wound still be encoded:
     const transactionTags = (transaction.get("tags") as unknown as Tag[]).map(
       (tag) => ({
         name: tag.get("name", { decode: true, string: true }),
@@ -949,9 +965,22 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // This function returns a new signed transaction. It doesn't mutate/sign the original one:
     const transactionToSign = await arweave.createTransaction({
-      data: transaction.data,
+      format: transaction.format,
       owner: publicKey,
       reward: transaction.reward,
+
+      // This value is added automatically when creating a transaction, so instead of propagating the one from the one
+      // the user sends, we'll just leave it to the new `createTransaction` to fill this in:
+      // last_tx: transaction.last_tx,
+
+      // To transfer AR:
+      target: transaction.target,
+      quantity: transaction.quantity,
+
+      // To send data:
+      data: transaction.data,
+      data_root: transaction.data_root,
+      data_size: transaction.data_size,
     });
 
     tags.forEach((tagData) => {
@@ -959,7 +988,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     });
 
     const dataToSign = await transactionToSign.getSignatureData();
-    const signatureBuffer = await this.api.sign(dataToSign, sub);
+    const signatureBuffer = await this.api.sign(dataToSign);
     const id = await hash(signatureBuffer);
 
     transactionToSign.setSignature({
@@ -1000,9 +1029,11 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     // Delegate the DataItem creation and signing to `signDataItem`:
     const signedDataItemBuffer = await this.signDataItem({
+      // Not used for now as `transaction.last_tx` is not 32 bytes, as required by `DataItem`:
+      // anchor: transaction.last_tx,
+      target: transaction.target,
       data: transaction.data,
       tags: transactionTags,
-      target: transaction.target,
     });
 
     // TODO: https://turbo.ardrive.io/ returns `freeUploadLimitBytes`, so we can check before trying to send and potentially ever before signing.
@@ -1073,9 +1104,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/encrypt|encrypt() docs}
    */
   async encrypt(plaintext: string | BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
-    const ciphertextBuffer = await this.api.encrypt(plaintext, sub);
+    const ciphertextBuffer = await this.api.encrypt(plaintext);
 
     return ciphertextBuffer;
   }
@@ -1092,9 +1123,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/decrypt|decrypt() docs}
    */
   async decrypt(ciphertext: BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
-    const plaintextBuffer = await this.api.decrypt(ciphertext, sub);
+    const plaintextBuffer = await this.api.decrypt(ciphertext);
 
     return plaintextBuffer;
   }
@@ -1113,9 +1144,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
    * @see {@link https://docs.othent.io/js-sdk-api/signature|signature() docs}
    */
   async signature(data: string | BinaryDataType): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
-    const signatureBuffer = await this.api.sign(data, sub);
+    const signatureBuffer = await this.api.sign(data);
 
     return signatureBuffer;
   }
@@ -1135,7 +1166,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     // TODO: Install `warp-bundles` and try to see what's going on here.
     // TODO: Check if this is working in ArConnect: https://github.com/arconnectio/ArConnect/blob/production/src/api/modules/sign_data_item/sign_data_item.background.ts
 
-    const { sub, publicKey } = await this.requireUserDataOrThrow();
+    const { publicKey } = await this.requireUserDataOrThrow();
 
     const { data, tags, ...options } = dataItem;
 
@@ -1144,10 +1175,41 @@ export class Othent implements Omit<ArConnect, "connect"> {
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
-      sign: this.api.getSignerSignFn(sub),
+      sign: this.api.getSignerSignFn(),
       // Note we don't provide `verify` as it's not used anyway:
       // verify: () => true,
     };
+
+    // TODO: Debugging code to see where the `signDataItem` signature issue is coming from:
+
+    /*
+    const original = this.crypto.subtle.importKey.bind(this.crypto.subtle) as Function;
+
+    this.crypto.subtle.importKey = (...args: any[]) => {
+      console.log("ARGS =", args);
+
+      return original(...args);
+    }
+
+    const publicJwk = {
+      kty: "RSA",
+      e: "AQAB",
+      n: publicKey,
+    } as const;
+
+    this.crypto.subtle.importKey(
+      "jwk",
+      publicJwk,
+      {
+        name: "RSA-PSS",
+        hash: {
+          name: "SHA-256",
+        },
+      },
+      false,
+      ["verify"]
+    );
+    */
 
     const opts: DataItemCreateOptions = {
       ...options,
@@ -1175,7 +1237,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     data: string | BinaryDataType,
     options?: SignMessageOptions,
   ): Promise<Uint8Array> {
-    const { sub } = await this.requireUserDataOrThrow();
+    await this.requireUserDataOrThrow();
 
     const hashAlgorithm = options?.hashAlgorithm || "SHA-256";
 
@@ -1184,7 +1246,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       binaryDataTypeOrStringToBinaryDataType(data),
     );
 
-    const signatureBuffer = await this.api.sign(hashArrayBuffer, sub);
+    const signatureBuffer = await this.api.sign(hashArrayBuffer);
 
     return signatureBuffer;
   }
@@ -1313,5 +1375,15 @@ export class Othent implements Omit<ArConnect, "connect"> {
     );
 
     return Promise.resolve(this.tokens.has(id));
+  }
+
+  // DEVELOPMENT:
+
+  __overridePublicKey(publicKeyPEM: string) {
+    this.auth0.overridePublicKey(publicKeyPEM);
+  }
+
+  __getServerInfo(options?: ServerInfoOptions) {
+    return this.api.serverInfo(options);
   }
 }

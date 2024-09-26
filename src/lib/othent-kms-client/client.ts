@@ -1,8 +1,9 @@
 import axios, { AxiosInstance } from "axios";
-import { createUser } from "./operations/createUser";
+import { createUser, CreateUserOptions } from "./operations/createUser";
 import { decrypt } from "./operations/decrypt";
 import { encrypt } from "./operations/encrypt";
 import { sign } from "./operations/sign";
+import { serverInfo, ServerInfoOptions } from "./operations/server-info";
 import { OthentAuth0Client } from "../auth/auth0";
 import { BinaryDataType } from "../utils/arweaveUtils";
 
@@ -16,25 +17,29 @@ export class OthentKMSClient {
     this.auth0 = auth0;
   }
 
-  async createUser(idToken: string) {
-    return createUser(this.api, idToken);
+  async serverInfo(options?: ServerInfoOptions) {
+    return serverInfo(this.api, this.auth0, options);
   }
 
-  async decrypt(ciphertext: string | BinaryDataType, keyName: string) {
-    return decrypt(this.api, this.auth0, ciphertext, keyName);
+  async createUser(options: CreateUserOptions) {
+    return createUser(this.api, this.auth0, options);
   }
 
-  async encrypt(plaintext: string | BinaryDataType, keyName: string) {
-    return encrypt(this.api, this.auth0, plaintext, keyName);
+  async decrypt(ciphertext: string | BinaryDataType) {
+    return decrypt(this.api, this.auth0, ciphertext);
   }
 
-  async sign(data: string | BinaryDataType, keyName: string) {
-    return sign(this.api, this.auth0, data, keyName);
+  async encrypt(plaintext: string | BinaryDataType) {
+    return encrypt(this.api, this.auth0, plaintext);
   }
 
-  getSignerSignFn(keyName: string) {
+  async sign(data: string | BinaryDataType) {
+    return sign(this.api, this.auth0, data);
+  }
+
+  getSignerSignFn() {
     return async (data: Uint8Array) => {
-      const signatureBuffer = await this.sign(data, keyName);
+      const signatureBuffer = await this.sign(data);
 
       return signatureBuffer;
     };

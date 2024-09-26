@@ -40,9 +40,17 @@ export { PROVIDER_LABELS } from "./lib/auth/auth0.constants";
 // API:
 // Export for backwards compatibility / easier migration.
 
-export type { BufferObject } from "./lib/othent-kms-client/operations/common.types";
+export type {
+  BufferObject,
+  LegacyBufferRecord,
+  LegacyBufferObject,
+  LegacyBufferData,
+} from "./lib/othent-kms-client/operations/common.types";
 
-export { isBufferObject } from "./lib/othent-kms-client/operations/common.types";
+export {
+  isBufferObject,
+  isLegacyBufferObject,
+} from "./lib/othent-kms-client/operations/common.types";
 
 // ArConnect:
 // Export ArConnnect types that are also used to type params on `Othent`.
