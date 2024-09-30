@@ -562,9 +562,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
       // request a new token to update the cached user details. Instead, we just extract the `UserDetails` from the API
       // response. Note we don't use as try-catch here, as if any error happens at this point, we just want to throw it.
 
-      const userDetailsFromCreateUserResponse = idTokenWithData
-        ? await this.auth0.getUserDetails(idTokenWithData)
-        : null;
+      const userDetailsFromCreateUserResponse =
+        await this.auth0.updateUserDetails(idTokenWithData);
 
       // We should now definitely have a valid token and user details:
       if (userDetailsFromCreateUserResponse)

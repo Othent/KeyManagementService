@@ -83,7 +83,9 @@ export class OthentAuth0Client {
     );
   }
 
-  async getUserDetails<D>(idToken: IdTokenWithData<D>): Promise<UserDetails> {
+  private async getUserDetails<D>(
+    idToken: IdTokenWithData<D>,
+  ): Promise<UserDetails> {
     const { email = "", nickname = "", walletAddress } = idToken;
     const sub = (idToken.sub || "") as Auth0Sub;
     const authProvider = sub.split("|")[0] as Auth0Provider;
@@ -310,7 +312,7 @@ export class OthentAuth0Client {
     });
   }
 
-  private async updateUserDetails<D>(
+  async updateUserDetails<D>(
     idToken: null | IdTokenWithData<D>,
   ): Promise<UserDetails | null> {
     const nextUserDetails: UserDetails | null =
