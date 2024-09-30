@@ -34,9 +34,12 @@ export async function getAnsProfile(
       },
     );
 
-    const balanceMatch = response.data.balances.find(
+    const balances = response.data.balances || [];
+
+    const balanceMatch = balances.find(
       (balance) => balance.address === address,
     );
+
     const domain = balanceMatch
       ? balanceMatch.primary_domain ||
         balanceMatch.ownedDomains[0].domain ||
