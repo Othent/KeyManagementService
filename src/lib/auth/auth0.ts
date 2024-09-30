@@ -83,7 +83,9 @@ export class OthentAuth0Client {
     );
   }
 
-  async getUserDetails<D>(idToken: IdTokenWithData<D>): Promise<UserDetails> {
+  private async getUserDetails<D>(
+    idToken: IdTokenWithData<D>,
+  ): Promise<UserDetails> {
     const { email = "", nickname = "", walletAddress } = idToken;
     const sub = (idToken.sub || "") as Auth0Sub;
     const authProvider = sub.split("|")[0] as Auth0Provider;
@@ -310,8 +312,8 @@ export class OthentAuth0Client {
     });
   }
 
-  private async updateUserDetails<D>(
-    idToken: IdTokenWithData<D>,
+  async updateUserDetails<D>(
+    idToken: null | IdTokenWithData<D>,
   ): Promise<UserDetails | null> {
     const nextUserDetails: UserDetails | null =
       idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
@@ -495,11 +497,10 @@ export class OthentAuth0Client {
 
     // await this.getTokenSilently();
 
-    const idToken = await auth0Client.getUser<IdTokenWithData>();
+    const idToken = (await auth0Client.getUser<IdTokenWithData>()) || null;
+    const userDetails = await this.updateUserDetails(idToken);
 
-    if (!idToken) throw new Error("Could not get the user's details");
-
-    return this.updateUserDetails(idToken);
+    return { idToken, userDetails };
   }
 
   async logOut() {

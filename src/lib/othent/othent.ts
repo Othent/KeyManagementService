@@ -8,7 +8,7 @@ import {
 } from "../utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "../othent-kms-client/client";
-import { UserDetails } from "../auth/auth0.types";
+import { IdTokenWithData, UserDetails } from "../auth/auth0.types";
 import {
   ArConnect,
   GatewayConfig,
@@ -67,8 +67,9 @@ import { toBuffer } from "../utils/bufferUtils";
 import { ServerInfoOptions } from "../othent-kms-client/operations/server-info";
 
 function initArweave(apiConfig: ApiConfig) {
-  const ArweaveClass = (ArweaveModule as unknown as { default: typeof Arweave })
-    .default;
+  const ArweaveClass = (ArweaveModule as any).hasOwnProperty("default")
+    ? (ArweaveModule as unknown as { default: typeof ArweaveModule }).default
+    : ArweaveModule;
 
   return ArweaveClass.init(apiConfig);
 }
@@ -395,65 +396,6 @@ export class Othent implements Omit<ArConnect, "connect"> {
     };
   }
 
-  /**
-   * If and only if you set the [`auth0LogInMethod = "redirect"`](./constructor.md#auth0loginmethod-auth0loginmethod) option,
-   * users will be redirected to Auth0 to authenticate and then back to your application. When they land back in your
-   * application, you must call `completeConnectionAfterRedirect()` to complete the authentication process.
-   *
-   * By default, `callbackUriWithParams = location.href`, if you environment supports it. Otherwise, you'll have to manually
-   * pass an URI with the `code` and `state` params provided by Auth0, which handles the redirect callback.
-   *
-   * See [Auth0's `handleRedirectCallback`](https://auth0.github.io/auth0-spa-js/classes/Auth0Client.html#handleRedirectCallback).
-   *
-   * @param callbackUriWithParams
-   *
-   * @returns A Promise with the `UserDetails` or `null` if the log in modal was closed, could not even be opened or
-   * authentication failed.
-   *
-   * @see {@link https://docs.othent.io/js-sdk-api/complete-connection-after-redirect|completeConnectionAfterRedirect() docs}
-   */
-  async completeConnectionAfterRedirect(
-    callbackUriWithParams?: Auth0RedirectUriWithParams,
-  ): Promise<UserDetails | null> {
-    if (this.config.auth0LogInMethod !== "redirect") {
-      console.warn(
-        'Calling `Othent.completeConnectionAfterRedirect()` is a NOOP unless the `auth0LogInMethod` options is `"redirect"`.',
-      );
-    }
-
-    // We default to the current URL, if we are in a browser:
-    const urlString =
-      callbackUriWithParams ||
-      (typeof location === "undefined"
-        ? ""
-        : (location.href as Auth0RedirectUriWithParams));
-
-    // If this is a mobile app URI, we need to turn it into an URL before passing it to the `URL` constructor (just to parse the params):
-    const urlObject = new URL(urlString.replace(/.+\.auth0:\/\//, "https://"));
-
-    const { searchParams } = urlObject;
-
-    // If this function is called but there are no `code` and `state` params available, this is a NOOP:
-    if (!searchParams.has("code") || !searchParams.has("state") || !urlString)
-      return null;
-
-    let userDetails: UserDetails | null = null;
-
-    try {
-      userDetails = await this.auth0.handleRedirectCallback(urlString);
-    } finally {
-      if (typeof location !== "undefined" && typeof history !== "undefined") {
-        searchParams.delete("code");
-        searchParams.delete("state");
-
-        // If we are in a browser, remove the `code` and `state` params from the URL:
-        history.replaceState(null, "", urlObject);
-      }
-    }
-
-    return userDetails;
-  }
-
   // ERROR EVENT / ERROR HANDLING:
 
   private onError(error: unknown) {
@@ -589,7 +531,122 @@ export class Othent implements Omit<ArConnect, "connect"> {
     };
   }
 
-  // CONNECT / DISCONNECT:
+  // CONNECT / DISCONNECT / USER CREATION:
+
+  private async completeConnectionOrCreateAuth0User(
+    userDetails: UserDetails | null,
+    hasIdToken: boolean,
+  ) {
+    // If we already have the user details we need, we simply return them:
+    if (userDetails && hasIdToken) return userDetails;
+
+    // We should now have a valid token, but potentially not the user details (as we didn't create the Auth0 user with
+    // the custom fields yet)...
+
+    // TODO: This check needs to be improved. In the production version, this should:
+    // - Redirect users to a popup / iframe where they can generate and get their keys and learn about them.
+    // - Make sure this works for new users and also for users that did not complete the key generation/import step before.
+
+    const importOnly = false;
+
+    if (!userDetails?.walletAddress && hasIdToken) {
+      // If that's the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
+      // got to it to avoid making another call to `encodeToken()` / `getTokenSilently()`:
+
+      // TODO: If the user was already created but the key creation process didn't work properly, or if the
+      // import process wasn't completed, this flow won't work as expected:
+
+      const idTokenWithData = await this.api.createUser({ importOnly });
+
+      // The `createUser` call above returns the updated user details (as `IdTokenWithData<null>`), so there's no need
+      // request a new token to update the cached user details. Instead, we just extract the `UserDetails` from the API
+      // response. Note we don't use as try-catch here, as if any error happens at this point, we just want to throw it.
+
+      const userDetailsFromCreateUserResponse =
+        await this.auth0.updateUserDetails(idTokenWithData);
+
+      // We should now definitely have a valid token and user details:
+      if (userDetailsFromCreateUserResponse)
+        return userDetailsFromCreateUserResponse;
+    }
+
+    // Otherwise, something unexpected happened, so we log out and throw:
+
+    // No need to await here as we don't really care about waiting for this:
+    this.auth0.logOut();
+
+    // Just in case someone is using `preserveLogs = true` in the DevTools Console. Otherwise, they will not see this
+    // error as `logOut` will reload the page:
+    throw new Error("Unexpected authentication error");
+  }
+
+  /**
+   * If and only if you set the [`auth0LogInMethod = "redirect"`](./constructor.md#auth0loginmethod-auth0loginmethod) option,
+   * users will be redirected to Auth0 to authenticate and then back to your application. When they land back in your
+   * application, you must call `completeConnectionAfterRedirect()` to complete the authentication process.
+   *
+   * By default, `callbackUriWithParams = location.href`, if you environment supports it. Otherwise, you'll have to manually
+   * pass an URI with the `code` and `state` params provided by Auth0, which handles the redirect callback.
+   *
+   * See [Auth0's `handleRedirectCallback`](https://auth0.github.io/auth0-spa-js/classes/Auth0Client.html#handleRedirectCallback).
+   *
+   * @param callbackUriWithParams
+   *
+   * @returns A Promise with the `UserDetails` or `null` if the log in modal was closed, could not even be opened or
+   * authentication failed.
+   *
+   * @see {@link https://docs.othent.io/js-sdk-api/complete-connection-after-redirect|completeConnectionAfterRedirect() docs}
+   */
+  async completeConnectionAfterRedirect(
+    callbackUriWithParams?: Auth0RedirectUriWithParams,
+  ): Promise<UserDetails | null> {
+    if (this.config.auth0LogInMethod !== "redirect") {
+      console.warn(
+        'Calling `Othent.completeConnectionAfterRedirect()` is a NOOP unless the `auth0LogInMethod` options is `"redirect"`.',
+      );
+    }
+
+    // We default to the current URL, if we are in a browser:
+    const urlString =
+      callbackUriWithParams ||
+      (typeof location === "undefined"
+        ? ""
+        : (location.href as Auth0RedirectUriWithParams));
+
+    // If this is a mobile app URI, we need to turn it into an URL before passing it to the `URL` constructor (just to parse the params):
+    const urlObject = new URL(urlString.replace(/.+\.auth0:\/\//, "https://"));
+
+    const { searchParams } = urlObject;
+
+    // If this function is called but there are no `code` and `state` params available, this is a NOOP:
+    if (!searchParams.has("code") || !searchParams.has("state") || !urlString)
+      return null;
+
+    let idToken: IdTokenWithData<void> | null = null;
+    let userDetails: UserDetails | null = null;
+
+    try {
+      const urlStringData = await this.auth0.handleRedirectCallback(urlString);
+
+      idToken = urlStringData.idToken;
+      userDetails = urlStringData.userDetails;
+    } catch (err) {
+      console.warn(
+        "The connection could not be completed. There was an error during the redirect flow:\n",
+        err,
+      );
+    } finally {
+      if (typeof location !== "undefined" && typeof history !== "undefined") {
+        searchParams.delete("code");
+        searchParams.delete("state");
+
+        // If we are in a browser, remove the `code` and `state` params from the URL:
+        history.replaceState(null, "", urlObject);
+      }
+    }
+
+    return this.completeConnectionOrCreateAuth0User(userDetails, !!idToken);
+  }
 
   /**
    * Prompts the user to sign in/up using Auth0's modal. This function cannot be called programmatically before the user
@@ -695,49 +752,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
       }
     }
 
-    // We should now have a valid token, but potentially not the user details...
-
-    // TODO: This check needs to be improved. In the production version, this should:
-    // - Redirect users to a popup / iframe where they can generate and get their keys and learn about them.
-    // - Make sure this works for new users and also for users that did not complete the key generation/import step before.
-
-    const importOnly = false;
-
-    if (id_token && !userDetails?.walletAddress) {
-      // If that's the case, we need to update the user in Auth0 calling our API. Note that we pass the last token we
-      // got to it to avoid making another call to `encodeToken()` / `getTokenSilently()`:
-
-      // TODO: If the user was already created but the key creation process didn't work properly, or if the
-      // import process wasn't completed, this flow won't work as expected:
-
-      const idTokenWithData = await this.api.createUser({ importOnly });
-
-      // The `createUser` call above returns the updated user details (as `IdTokenWithData<null>`), so there's no need
-      // request a new token to update the cached user details. Instead, we just extract the `UserDetails` from the API
-      // response. Note we don't use as try-catch here, as if any error happens at this point, we just want to throw it.
-
-      if (idTokenWithData) {
-        userDetails = await this.auth0.getUserDetails(idTokenWithData);
-      }
-    }
-
-    // TODO: Finish the import keys PoC below:
-
-    // if (importOnly) {
-    //   await testClientKeyGenerationAndWrapping(this.api.api, this.auth0);
-    // }
-
-    // We should now definitely have a valid token and user details:
-
-    if (id_token && userDetails) return userDetails;
-
-    // Otherwise, something unexpected happened, so we log out and throw:
-
-    // No need to await here as we don't really care about waiting for this:
-
-    this.auth0.logOut();
-
-    throw new Error("Unexpected authentication error");
+    return this.completeConnectionOrCreateAuth0User(userDetails, !!id_token);
   }
 
   /**
