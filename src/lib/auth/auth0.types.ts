@@ -12,6 +12,7 @@ import {
   Auth0Strategy,
   OthentStorageKey,
 } from "../config/config.types";
+import { Route } from "../othent-kms-client/operations/common.constants";
 
 // OthentAuth0Client:
 
@@ -42,12 +43,14 @@ export type AuthorizationParamsWithTransactionInput = AuthorizationParams & {
 
 // User JWT data:
 
-export interface IdTokenWithData<D = void> extends IdToken {
+export interface UserMetadata {
   // Custom from Auth0's Add User Metadata action:
   owner: B64UrlString; // Public key derived from `sub`.
   walletAddress: B64UrlString; // Wallet address derived from `owner`.
   authSystem: "KMS";
+}
 
+export interface IdTokenWithData<D = void> extends IdToken, UserMetadata {
   // Extra data also added to the token in Add User Metadata action when calling functions other than createUser:
   data: void extends D ? never : D;
 }
@@ -66,7 +69,7 @@ export type Auth0Provider =
   | `<Twitch>`
   | `github`;
 
-export type Auth0Sub = `${Auth0Provider}|(${string})`;
+export type Auth0Sub = `${Auth0Provider}|${string}`;
 
 export type Auth0ProviderLabel =
   | `Apple`
@@ -205,26 +208,46 @@ export interface StoredUserDetails {
 
 // JWT token data / encodeToken():
 
-export interface BaseCryptoOperationData {
-  keyName: string;
+export interface BaseCryptoOperationData<P extends Route> {
+  path: P;
 }
 
-export interface SignOperationData extends BaseCryptoOperationData {
-  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+export interface CreateUserOperationData
+  extends BaseCryptoOperationData<Route.CREATE_USER> {
+  importOnly?: boolean;
+}
+
+export type FetchImportJobOperationData =
+  BaseCryptoOperationData<Route.FETCH_IMPORT_JOB>;
+
+export interface ImportKeysOperationData
+  extends BaseCryptoOperationData<Route.IMPORT_KEYS> {
+  wrappedSignKey: null | ArrayBuffer;
+  wrappedEncryptDecryptKey: null | ArrayBuffer;
+}
+
+export type ActivateKeysOperationData =
+  BaseCryptoOperationData<Route.ACTIVATE_KEYS>;
+
+export interface SignOperationData extends BaseCryptoOperationData<Route.SIGN> {
   data: string | BinaryDataType;
 }
 
-export interface EncryptOperationData extends BaseCryptoOperationData {
-  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+export interface EncryptOperationData
+  extends BaseCryptoOperationData<Route.ENCRYPT> {
   plaintext: string | BinaryDataType;
 }
 
-export interface DecryptOperationData extends BaseCryptoOperationData {
-  // TODO: We should not be relaying on JSON.stringify for this, so this should be typed as just `string`:
+export interface DecryptOperationData
+  extends BaseCryptoOperationData<Route.DECRYPT> {
   ciphertext: string | BinaryDataType;
 }
 
 export type CryptoOperationData =
+  | CreateUserOperationData
+  | FetchImportJobOperationData
+  | ImportKeysOperationData
+  | ActivateKeysOperationData
   | SignOperationData
   | EncryptOperationData
   | DecryptOperationData;

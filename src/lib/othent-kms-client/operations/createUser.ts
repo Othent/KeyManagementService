@@ -1,35 +1,44 @@
 import { AxiosInstance } from "axios";
 import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
+import { OthentAuth0Client } from "../../auth/auth0";
+import { Route } from "./common.constants";
+import { IdTokenWithData } from "../../auth/auth0.types";
 
-// New format:
-// export type CreateUserResponseData = boolean;
+export interface CreateUserOptions {
+  importOnly?: boolean;
+}
 
-// Old format:
-export interface CreateUserResponseData {
-  data: boolean;
+interface CreateUserResponseData {
+  idTokenWithData: IdTokenWithData<null> | null;
 }
 
 export async function createUser(
   api: AxiosInstance,
-  idToken: string,
-): Promise<boolean> {
-  let createUserSuccess = false;
+  auth0: OthentAuth0Client,
+  options: CreateUserOptions,
+): Promise<IdTokenWithData<null> | null> {
+  const encodedData = await auth0.encodeToken({
+    path: Route.CREATE_USER,
+    ...options,
+  });
+
+  let idTokenWithData: IdTokenWithData<null> | null = null;
 
   try {
     const createUserResponse = await api.post<CreateUserResponseData>(
-      "/create-user",
-      { encodedData: idToken } satisfies CommonEncodedRequestData,
+      Route.CREATE_USER,
+      { encodedData } satisfies CommonEncodedRequestData,
     );
 
-    createUserSuccess = createUserResponse.data.data;
+    idTokenWithData = createUserResponse.data.idTokenWithData;
   } catch (err) {
     throw parseErrorResponse(err);
   }
 
-  if (!createUserSuccess) {
+  if (!idTokenWithData) {
     throw new Error("Error creating user on server.");
   }
 
-  return true;
+  return idTokenWithData;
 }

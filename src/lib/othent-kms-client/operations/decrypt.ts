@@ -1,47 +1,44 @@
 import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
-import { BufferObject, CommonEncodedRequestData } from "./common.types";
-import { parseErrorResponse } from "../../utils/errors/error.utils";
 import {
-  BinaryDataType,
-  binaryDataTypeToString,
-  stringToUint8Array,
-} from "../../utils/arweaveUtils";
+  CommonEncodedRequestData,
+  normalizeBufferDataWithNull,
+} from "./common.types";
+import { parseErrorResponse } from "../../utils/errors/error.utils";
+import { B64String, BinaryDataType } from "../../utils/arweaveUtils";
+import { Route } from "./common.constants";
 
-// New format:
-// type DecryptResponseData = string;
-
-// Old format:
 interface DecryptResponseData {
-  data: string | BufferObject;
+  decryptedData: B64String;
 }
 
 export async function decrypt(
   api: AxiosInstance,
   auth0: OthentAuth0Client,
   ciphertext: string | BinaryDataType,
-  keyName: string,
 ): Promise<Uint8Array> {
-  // TODO: `ciphertext` should be encoded with `binaryDataTypeOrStringTob64String()` if we are going to send it inside a JSON:
-  const encodedData = await auth0.encodeToken({ ciphertext, keyName });
+  const encodedData = await auth0.encodeToken({
+    path: Route.DECRYPT,
+    ciphertext,
+  });
 
-  let plaintext: string | BufferObject | null = null;
+  let decryptedData: null | Uint8Array = null;
 
   try {
-    const decryptResponse = await api.post<DecryptResponseData>("/decrypt", {
+    const decryptResponse = await api.post<DecryptResponseData>(Route.DECRYPT, {
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    plaintext = decryptResponse.data.data ?? null;
+    decryptedData = normalizeBufferDataWithNull(
+      decryptResponse.data.decryptedData,
+    );
   } catch (err) {
     throw parseErrorResponse(err);
   }
 
-  if (plaintext === null) {
+  if (decryptedData === null) {
     throw new Error("Error decrypting on server.");
   }
 
-  return typeof plaintext === "string"
-    ? stringToUint8Array(plaintext)
-    : new Uint8Array(plaintext.data);
+  return decryptedData;
 }

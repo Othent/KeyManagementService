@@ -69,23 +69,22 @@ https://github.com/Othent/KMS-test-repo.
 1.  Use [`pnpm version`](https://docs.npmjs.com/cli/v7/commands/npm-version) to bump the version, which will also make sure
     the next commit has the right tags.
 
-        **Stable release:**
+    **Stable release:**
 
-        ```
-        npm version patch
-        npm version minor
-        npm version major
-        ```
+    ```
+    npm version patch
+    npm version minor
+    npm version major
+    ```
 
+    **Pre-release:**
 
-        **Pre-release:**
-
-        ```
-        npm version prerelease --preid=beta
-        npm version prepatch --preid=beta
-        npm version preminor --preid=beta
-        npm version premajor --preid=beta
-        ```
+    ```
+    npm version prerelease --preid=beta
+    npm version prepatch --preid=beta
+    npm version preminor --preid=beta
+    npm version premajor --preid=beta
+    ```
 
     The `preversion`, `version` and `postversion` scripts defined in `package.json` will test, format, build, tag and
     push all the changes automatically. See https://docs.npmjs.com/cli/v10/commands/npm-version.

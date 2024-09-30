@@ -1,35 +1,31 @@
-name: "🚀 publish"
+# name: 🚀 Release
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  release:
-    runs-on: macos-latest
-    env:
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-    name: 🚀 publish
-    steps:
-      - name: 📚 checkout
-        uses: actions/checkout@v2.1.1
-      - name: 🟢 node
-        uses: actions/setup-node@v2.5.0
-        with:
-          node-version: 20.5.0
-          registry-url: https://registry.npmjs.org
-        env:
-          envFile: .env
-      - name: Install Bun
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "PATH=$HOME/.bun/bin:$PATH" >> $GITHUB_ENV
-      - name: 📦 install dependencies
-        run: npm install
-      - name: 📝 build
-        run: npm run build
-      - name: 🚀 publish
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
+# jobs:
+
+#   publish:
+#     name: 🚀 Publish to NPM
+#     runs-on: ubuntu-latest
+
+#     env:
+#       ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+
+#     steps:
+
+#       - name: 📚 Checkout
+#         uses: actions/checkout@v4
+
+#       - name: ⚙️ Setup Environment and Dependencies
+#         uses: ./.github/actions/setup-environment-n-deps
+
+#       - name: 🧱 Build (tsup)
+#         run: pnpm build
+
+#       - name: 🚀 Publish to NPM
+#         run: npm publish
+#         env:
+#           NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}

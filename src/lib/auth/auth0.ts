@@ -1,9 +1,4 @@
-import {
-  Auth0Client,
-  CacheLocation,
-  createAuth0Client,
-  ICache,
-} from "@auth0/auth0-spa-js";
+import { Auth0Client, createAuth0Client } from "@auth0/auth0-spa-js";
 import {
   CryptoOperationData,
   AuthorizationParams,
@@ -15,7 +10,6 @@ import {
   StoredUserDetails,
   Auth0Sub,
   Auth0Provider,
-  Auth0ProviderLabel,
   OthentWalletAddressLabel,
 } from "./auth0.types";
 import {
@@ -36,9 +30,14 @@ import {
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
 import { PROVIDER_LABELS } from "./auth0.constants";
+import { B64UrlString, uint8ArrayTob64Url } from "../utils/arweaveUtils";
+import { transactionInputReplacer } from "./auth0.utils";
+import { pemToUint8Array } from "../othent-kms-client/operations/import-key";
 
 export class OthentAuth0Client {
   private debug = false;
+
+  private overriddenPublicKey: B64UrlString | null = null;
 
   private loginMethod: Auth0LogInMethod;
 
@@ -84,9 +83,7 @@ export class OthentAuth0Client {
     );
   }
 
-  static async getUserDetails<D>(
-    idToken: IdTokenWithData<D>,
-  ): Promise<UserDetails> {
+  async getUserDetails<D>(idToken: IdTokenWithData<D>): Promise<UserDetails> {
     const { email = "", nickname = "", walletAddress } = idToken;
     const sub = (idToken.sub || "") as Auth0Sub;
     const authProvider = sub.split("|")[0] as Auth0Provider;
@@ -117,12 +114,12 @@ export class OthentAuth0Client {
       updatedAt: idToken.updated_at || "",
       email,
       emailVerified: !!idToken.email_verified,
-      owner: idToken.owner,
+      owner: this.overriddenPublicKey || idToken.owner,
       walletAddress: idToken.walletAddress,
       walletAddressLabel,
       authSystem: idToken.authSystem,
       authProvider,
-    };
+    } satisfies UserDetails;
   }
 
   constructor({
@@ -318,7 +315,7 @@ export class OthentAuth0Client {
   ): Promise<UserDetails | null> {
     const nextUserDetails: UserDetails | null =
       idToken && OthentAuth0Client.isIdTokenValidUser(idToken)
-        ? await OthentAuth0Client.getUserDetails(idToken)
+        ? await this.getUserDetails(idToken)
         : null;
 
     return this.setUserDetails(nextUserDetails);
@@ -336,7 +333,7 @@ export class OthentAuth0Client {
     authorizationParamsOrData: AuthorizationParams | CryptoOperationData = {},
   ): AuthorizationParamsWithTransactionInput {
     const { authorizationParams, data } =
-      authorizationParamsOrData.hasOwnProperty("keyName")
+      authorizationParamsOrData.hasOwnProperty("path")
         ? {
             authorizationParams: null,
             data: authorizationParamsOrData as CryptoOperationData,
@@ -346,30 +343,6 @@ export class OthentAuth0Client {
               authorizationParamsOrData as AuthorizationParams,
             data: null,
           };
-
-    const replacer = (key: string, value: any) => {
-      let bufferValues: number[] = [];
-
-      if (
-        value instanceof Buffer ||
-        value instanceof DataView ||
-        ArrayBuffer.isView(value)
-      ) {
-        bufferValues = Array.from(new Uint8Array(value.buffer));
-      } else if (value instanceof ArrayBuffer) {
-        bufferValues = Array.from(new Uint8Array(value));
-      } else {
-        return value;
-      }
-
-      // if key === 'data' then we are signing else we are encrypting / decrypting
-      return key === "data"
-        ? Object.fromEntries(Object.entries(bufferValues))
-        : {
-            type: "Buffer",
-            data: bufferValues,
-          };
-    };
 
     const { appInfo } = this;
 
@@ -388,7 +361,10 @@ export class OthentAuth0Client {
 
     return {
       ...authorizationParams,
-      transaction_input: JSON.stringify(transactionInput, replacer),
+      transaction_input: JSON.stringify(
+        transactionInput,
+        transactionInputReplacer,
+      ),
     } satisfies AuthorizationParamsWithTransactionInput;
   }
 
@@ -403,10 +379,24 @@ export class OthentAuth0Client {
 
     if (this.debug) {
       try {
-        console.log("getTokenSilently() =", {
-          ...authorizationParams,
-          transaction_input: JSON.parse(authorizationParams.transaction_input),
-        });
+        const parsedTransactionInput = JSON.parse(
+          authorizationParams.transaction_input,
+        );
+
+        if (
+          Object.keys(authorizationParams).length === 1 &&
+          Object.keys(authorizationParams)[0] === "transaction_input"
+        ) {
+          console.log(
+            "getTokenSilently().transaction_input =",
+            parsedTransactionInput,
+          );
+        } else {
+          console.log("getTokenSilently() =", {
+            ...authorizationParams,
+            transaction_input: parsedTransactionInput,
+          });
+        }
       } catch (err) {
         console.error("Error logging/parsing `authorizationParams`:", err);
       }
@@ -561,5 +551,13 @@ export class OthentAuth0Client {
 
   getCachedUserEmail() {
     return this.userDetails?.email || null;
+  }
+
+  // DEVELOPMENT:
+
+  async overridePublicKey(publicKeyPEM: string) {
+    this.overriddenPublicKey = uint8ArrayTob64Url(
+      pemToUint8Array(publicKeyPEM as any),
+    );
   }
 }

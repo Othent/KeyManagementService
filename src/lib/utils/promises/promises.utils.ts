@@ -5,3 +5,5 @@ export function isPromise<T>(obj: Promise<T> | unknown): obj is Promise<T> {
     typeof (obj as any).then === "function"
   );
 }
+
+export const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
