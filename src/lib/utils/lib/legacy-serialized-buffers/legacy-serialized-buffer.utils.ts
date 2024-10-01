@@ -45,8 +45,6 @@ export function toLegacyBufferObject(buffer: Uint8Array): LegacyBufferObject {
 
 // NORMALIZATION:
 
-// TODO: Update the ping endpoint in the other PR.
-
 export function normalizeLegacyBufferDataOrB64(
   data?: null,
   treatStringsAsB64?: boolean,
