@@ -30,9 +30,13 @@ import {
 import { getCookieStorage } from "../utils/cookies/cookie-storage";
 import { getAnsProfile } from "../utils/ans/ans.utils";
 import { PROVIDER_LABELS } from "./auth0.constants";
-import { B64UrlString, uint8ArrayTob64Url } from "../utils/arweaveUtils";
 import { transactionInputReplacer } from "./auth0.utils";
-import { pemToUint8Array } from "../othent-kms-client/operations/import-key";
+import {
+  PEMString,
+  pemToUint8Array,
+} from "../othent-kms-client/operations/import-key";
+import { B64UrlString } from "../utils/lib/binary-data-types/binary-data-types.types";
+import { B64Url } from "../utils/lib/binary-data-types/binary-data-types.utils";
 
 export class OthentAuth0Client {
   private debug = false;
@@ -557,9 +561,7 @@ export class OthentAuth0Client {
 
   // DEVELOPMENT:
 
-  async overridePublicKey(publicKeyPEM: string) {
-    this.overriddenPublicKey = uint8ArrayTob64Url(
-      pemToUint8Array(publicKeyPEM as any),
-    );
+  async overridePublicKey(publicKeyPEM: PEMString) {
+    this.overriddenPublicKey = B64Url.from(pemToUint8Array(publicKeyPEM));
   }
 }

@@ -1,11 +1,4 @@
 import { OthentAuth0Client } from "../auth/auth0";
-import {
-  B64UrlString,
-  BinaryDataType,
-  binaryDataTypeOrStringToBinaryDataType,
-  hash,
-  uint8ArrayTob64Url,
-} from "../utils/arweaveUtils";
 import { createData, DataItemCreateOptions, Signer } from "warp-arbundles";
 import { OthentKMSClient } from "../othent-kms-client/client";
 import { IdTokenWithData, UserDetails } from "../auth/auth0.types";
@@ -35,7 +28,6 @@ import { isPromise } from "../utils/promises/promises.utils";
 import axios from "axios";
 import type Transaction from "arweave/web/lib/transaction";
 import type { Tag } from "arweave/web/lib/transaction";
-import type Arweave from "arweave/web";
 import type { ApiConfig } from "arweave/web/lib/api";
 import {
   ArDriveBundledTransactionData,
@@ -63,8 +55,18 @@ import {
   PopupTimeoutError,
 } from "@auth0/auth0-spa-js";
 import { Buffer } from "buffer";
-import { toBuffer } from "../utils/bufferUtils";
 import { ServerInfoOptions } from "../othent-kms-client/operations/server-info";
+import { toBuffer } from "../utils/lib/binary-data-types/legacy-b64.utils";
+import { PEMString } from "../othent-kms-client/operations/import-key";
+import {
+  B64UrlString,
+  BinaryDataType,
+} from "../utils/lib/binary-data-types/binary-data-types.types";
+import {
+  B64Url,
+  BDT,
+} from "../utils/lib/binary-data-types/binary-data-types.utils";
+import { hash } from "../utils/lib/hash/hash.utils";
 
 function initArweave(apiConfig: ApiConfig) {
   const ArweaveClass = (ArweaveModule as any).hasOwnProperty("default")
@@ -1007,9 +1009,9 @@ export class Othent implements Omit<ArConnect, "connect"> {
     const id = await hash(signatureBuffer);
 
     transactionToSign.setSignature({
-      id: uint8ArrayTob64Url(id),
+      id: B64Url.from(id),
       owner: publicKey,
-      signature: uint8ArrayTob64Url(signatureBuffer),
+      signature: B64Url.from(signatureBuffer),
       tags: transactionToSign.tags,
       reward: transactionToSign.reward,
     });
@@ -1185,8 +1187,15 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     const { data, tags, ...options } = dataItem;
 
+    console.log(
+      "EQ?",
+      Buffer.from(publicKey, "base64url"),
+      toBuffer(publicKey),
+    );
+
     const signer: Signer = {
-      publicKey: toBuffer(publicKey),
+      publicKey: Buffer.from(publicKey, "base64url"),
+      // publicKey: toBuffer(publicKey),
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,
@@ -1258,7 +1267,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     const hashArrayBuffer = await this.crypto.subtle.digest(
       hashAlgorithm,
-      binaryDataTypeOrStringToBinaryDataType(data),
+      BDT.from(data),
     );
 
     const signatureBuffer = await this.api.sign(hashArrayBuffer);
@@ -1291,7 +1300,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     const hashArrayBuffer = await this.crypto.subtle.digest(
       hashAlgorithm,
-      binaryDataTypeOrStringToBinaryDataType(data),
+      BDT.from(data),
     );
 
     const publicJWK: JsonWebKey = {
@@ -1315,7 +1324,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     const result = await this.crypto.subtle.verify(
       { name: "RSA-PSS", saltLength: 32 },
       cryptoKey,
-      binaryDataTypeOrStringToBinaryDataType(signature),
+      BDT.from(signature),
       hashArrayBuffer,
     );
 
@@ -1336,10 +1345,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
     data: string | BinaryDataType,
     options?: SignMessageOptions,
   ): Promise<Uint8Array> {
-    return hash(
-      binaryDataTypeOrStringToBinaryDataType(data),
-      options?.hashAlgorithm,
-    );
+    return hash(BDT.from(data), options?.hashAlgorithm);
   }
 
   // MISC.:
@@ -1394,7 +1400,7 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
   // DEVELOPMENT:
 
-  __overridePublicKey(publicKeyPEM: string) {
+  __overridePublicKey(publicKeyPEM: PEMString) {
     this.auth0.overridePublicKey(publicKeyPEM);
   }
 

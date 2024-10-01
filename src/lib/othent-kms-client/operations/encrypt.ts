@@ -5,8 +5,11 @@ import {
   normalizeBufferDataWithNull,
 } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { B64String, BinaryDataType } from "../../utils/arweaveUtils";
 import { Route } from "./common.constants";
+import {
+  B64String,
+  BinaryDataType,
+} from "../../utils/lib/binary-data-types/binary-data-types.types";
 
 interface EncryptResponseData {
   encryptedData: B64String;

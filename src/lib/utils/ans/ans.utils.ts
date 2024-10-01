@@ -1,7 +1,7 @@
 import axios from "axios";
 
-import { B64UrlString } from "../arweaveUtils";
 import { ANSDomain } from "../../auth/auth0.types";
+import { B64UrlString } from "../lib/binary-data-types/binary-data-types.types";
 
 // Note this type is incomplete. Only the properties we care about in `getAnsProfile` have been typed:
 export interface ANSContractState {

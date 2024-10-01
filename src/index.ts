@@ -71,5 +71,5 @@ export { OthentErrorID, OthentError } from "./lib/utils/errors/error";
 export type * from "./lib/utils/typescript/url.types";
 
 // Buffer utils & transforms:
-// TODO: Export everything from arweaveUtils, rename to bufferUtils or similar, add tests, consider adding them into a namespace/object (like in bufferUtils.ts).
-export * from "./lib/utils/arweaveUtils";
+export type * from "./lib/utils/lib/binary-data-types/binary-data-types.types";
+export type * from "./lib/utils/lib/binary-data-types/binary-data-types.utils";

@@ -1,8 +1,10 @@
 import {
   B64String,
-  b64ToUint8Array,
   B64UrlString,
-} from "../../utils/arweaveUtils";
+} from "../../utils/lib/binary-data-types/binary-data-types.types";
+import { UI8A } from "../../utils/lib/binary-data-types/binary-data-types.utils";
+
+// TODO: Also move this file to lib:
 
 export interface CommonEncodedRequestData {
   encodedData: string;
@@ -65,7 +67,7 @@ export function normalizeBufferDataWithNull(
   if (data === null || data === undefined) return null;
 
   if (typeof data === "string") {
-    return b64ToUint8Array(data);
+    return UI8A.from(data, "B64StringOrUrlString");
   }
 
   if (isLegacyBufferObject(data)) {

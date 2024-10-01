@@ -5,7 +5,7 @@ import { encrypt } from "./operations/encrypt";
 import { sign } from "./operations/sign";
 import { serverInfo, ServerInfoOptions } from "./operations/server-info";
 import { OthentAuth0Client } from "../auth/auth0";
-import { BinaryDataType } from "../utils/arweaveUtils";
+import { BinaryDataType } from "../utils/lib/binary-data-types/binary-data-types.types";
 
 export class OthentKMSClient {
   api: AxiosInstance;
