@@ -137,7 +137,7 @@ export const BDT = {
 //   return new TextDecoder().decode(buffer);
 // }
 
-// TODO: Check this behaviour in the tests and add a `clone` option if needed:
+// TODO: Check this behavior in the tests and add a `clone` option if needed:
 // export function bufferToUint8Array(buffer: Buffer): Uint8Array {
 //   return new Uint8Array(new Uint8Array(buffer.buffer));
 //
