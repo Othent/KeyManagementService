@@ -11,7 +11,7 @@ import {
   Auth0Strategy,
   OthentStorageKey,
 } from "../config/config.types";
-import { Route } from "../othent-kms-client/operations/common.constants";
+import { Route } from "../othent-kms-client/client.constants";
 import {
   B64UrlString,
   BinaryDataType,

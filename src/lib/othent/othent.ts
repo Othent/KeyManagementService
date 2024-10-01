@@ -56,7 +56,6 @@ import {
 } from "@auth0/auth0-spa-js";
 import { Buffer } from "buffer";
 import { ServerInfoOptions } from "../othent-kms-client/operations/server-info";
-import { toBuffer } from "../utils/lib/binary-data-types/legacy-b64.utils";
 import { PEMString } from "../othent-kms-client/operations/import-key";
 import {
   B64UrlString,
@@ -65,6 +64,7 @@ import {
 import {
   B64Url,
   BDT,
+  UI8A,
 } from "../utils/lib/binary-data-types/binary-data-types.utils";
 import { hash } from "../utils/lib/hash/hash.utils";
 
@@ -1187,15 +1187,8 @@ export class Othent implements Omit<ArConnect, "connect"> {
 
     const { data, tags, ...options } = dataItem;
 
-    console.log(
-      "EQ?",
-      Buffer.from(publicKey, "base64url"),
-      toBuffer(publicKey),
-    );
-
     const signer: Signer = {
-      publicKey: Buffer.from(publicKey, "base64url"),
-      // publicKey: toBuffer(publicKey),
+      publicKey: Buffer.from(UI8A.from(publicKey, "B64UrlString")),
       signatureType: 1,
       signatureLength: 512,
       ownerLength: 512,

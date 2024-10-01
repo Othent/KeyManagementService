@@ -37,21 +37,6 @@ export type {
 // TODO: Add this to the docs:
 export { PROVIDER_LABELS } from "./lib/auth/auth0.constants";
 
-// API:
-// Export for backwards compatibility / easier migration.
-
-export type {
-  BufferObject,
-  LegacyBufferRecord,
-  LegacyBufferObject,
-  LegacyBufferData,
-} from "./lib/othent-kms-client/operations/common.types";
-
-export {
-  isBufferObject,
-  isLegacyBufferObject,
-} from "./lib/othent-kms-client/operations/common.types";
-
 // ArConnect:
 // Export ArConnnect types that are also used to type params on `Othent`.
 
@@ -70,6 +55,25 @@ export { OthentErrorID, OthentError } from "./lib/utils/errors/error";
 // Misc.:
 export type * from "./lib/utils/typescript/url.types";
 
+// LIB (these should eventually be moved to their own repos):
+
+// Legacy serialized buffer types. Exported for backwards compatibility / easier migration.
+
+export type {
+  BufferObject,
+  LegacyBufferRecord,
+  LegacyBufferObject,
+  LegacyBufferData,
+} from "./lib/utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.types";
+
+export {
+  isLegacyBufferObject,
+  isBufferObject,
+  toLegacyBufferRecord,
+  toLegacyBufferObject,
+} from "./lib/utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.utils";
+
 // Buffer utils & transforms:
+
 export type * from "./lib/utils/lib/binary-data-types/binary-data-types.types";
-export type * from "./lib/utils/lib/binary-data-types/binary-data-types.utils";
+export * from "./lib/utils/lib/binary-data-types/binary-data-types.utils";

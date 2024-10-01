@@ -101,7 +101,6 @@ export async function generateKey(): Promise<{
 
 import { OthentAuth0Client } from "../../auth/auth0";
 import { AxiosInstance } from "axios";
-import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import type { google } from "@google-cloud/kms/build/protos/protos";
 
@@ -149,9 +148,10 @@ export async function fetchImportJob(
 type CryptoKeyVersionState = string;
 import { UserDetails } from "../../auth/auth0.types";
 import { sleep } from "../../utils/promises/promises.utils";
-import { Route } from "./common.constants";
+import { Route } from "../client.constants";
 import { UI8A } from "../../utils/lib/binary-data-types/binary-data-types.utils";
 import { B64String } from "../../utils/lib/binary-data-types/binary-data-types.types";
+import { CommonEncodedRequestData } from "../client.types";
 
 interface ImportKeysResult {
   signKeyState: null | CryptoKeyVersionState;

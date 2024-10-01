@@ -1,15 +1,13 @@
 import { OthentAuth0Client } from "../../auth/auth0";
 import { AxiosInstance } from "axios";
-import {
-  CommonEncodedRequestData,
-  normalizeBufferDataWithNull,
-} from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { Route } from "./common.constants";
+import { Route } from "../client.constants";
 import {
   B64String,
   BinaryDataType,
 } from "../../utils/lib/binary-data-types/binary-data-types.types";
+import { normalizeBufferDataWithNull } from "../../utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.utils";
+import { CommonEncodedRequestData } from "../client.types";
 
 interface EncryptResponseData {
   encryptedData: B64String;

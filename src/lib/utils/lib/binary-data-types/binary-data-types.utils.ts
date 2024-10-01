@@ -32,8 +32,7 @@ export function uInt8ArrayFrom(
   stringSourceType?: StringSourceType,
 ): Uint8Array {
   if (typeof source === "string") {
-    if (stringSourceType === "string")
-      return new TextEncoder().encode(source as string);
+    if (stringSourceType === "string") return BDT.encode(source as string);
     if (stringSourceType === "B64String")
       return B64js.toByteArray(source as B64String);
     if (
@@ -114,7 +113,19 @@ export function binaryDataTypeFrom<T extends BinaryDataType>(
   return typeof source === "string" ? UI8A.from(source, "string") : source;
 }
 
-export const BDT = { from: binaryDataTypeFrom };
+export function binaryDataTypeEncode(source: string): Uint8Array {
+  return new TextEncoder().encode(source as string);
+}
+
+export function binaryDataTypeDecode(buffer: BinaryDataType): string {
+  return new TextDecoder().decode(buffer);
+}
+
+export const BDT = {
+  from: binaryDataTypeFrom,
+  encode: binaryDataTypeEncode,
+  decode: binaryDataTypeDecode,
+};
 
 // Old stuff:
 
@@ -122,6 +133,7 @@ export const BDT = { from: binaryDataTypeFrom };
 //   return new TextDecoder().decode(buffer);
 // }
 
+// TODO: Check this behaviour in the tests and add a `clone` option if needed:
 // export function bufferToUint8Array(buffer: Buffer): Uint8Array {
 //   return new Uint8Array(new Uint8Array(buffer.buffer));
 //

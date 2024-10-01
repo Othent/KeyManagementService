@@ -1,40 +1,14 @@
 import {
   B64String,
   B64UrlString,
-} from "../../utils/lib/binary-data-types/binary-data-types.types";
-import { UI8A } from "../../utils/lib/binary-data-types/binary-data-types.utils";
-
-// TODO: Also move this file to lib:
-
-export interface CommonEncodedRequestData {
-  encodedData: string;
-}
-
-/**
- * @deprecated
- */
-export type LegacyBufferRecord = Record<number, number>;
-
-/**
- * @deprecated
- */
-export interface LegacyBufferObject {
-  type: "Buffer";
-  data: number[];
-}
-
-/**
- * Alias of `LegacyBufferObject`.
- *
- * @deprecated
- */
-export type BufferObject = LegacyBufferObject;
-
-/**
- * JSON-compatible representation of a Buffer.
- * @deprecated This type will soon be removed and the code will be updated to work exclusively with native binary data types (e.g. `Uint8Array`).
- */
-export type LegacyBufferData = LegacyBufferRecord | LegacyBufferObject;
+} from "../binary-data-types/binary-data-types.types";
+import { UI8A } from "../binary-data-types/binary-data-types.utils";
+import {
+  LegacyBufferData,
+  LegacyBufferObject,
+  BufferObject,
+  LegacyBufferRecord,
+} from "./legacy-serialized-buffer.types";
 
 export function isLegacyBufferObject(
   legacyBufferData: LegacyBufferData,
