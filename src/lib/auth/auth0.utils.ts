@@ -1,4 +1,4 @@
-import { binaryDataTypeOrStringTob64String } from "../utils/arweaveUtils";
+import { B64 } from "../utils/lib/binary-data-types/binary-data-types.utils";
 import { CRYPTO_OPERATION_BINARY_DATA_KEYS } from "./auth0.constants";
 
 export function transactionInputReplacer(key: string, value: any) {
@@ -10,5 +10,5 @@ export function transactionInputReplacer(key: string, value: any) {
 
   // This is `TransactionInput.data.data` (from sign operations) or any of the other binary properties fom the other
   // operations:
-  return binaryDataTypeOrStringTob64String(value);
+  return B64.from(value);
 }

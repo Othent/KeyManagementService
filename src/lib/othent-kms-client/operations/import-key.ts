@@ -101,10 +101,8 @@ export async function generateKey(): Promise<{
 
 import { OthentAuth0Client } from "../../auth/auth0";
 import { AxiosInstance } from "axios";
-import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import type { google } from "@google-cloud/kms/build/protos/protos";
-import { B64String, b64ToUint8Array } from "../../utils/arweaveUtils";
 
 // FETCH IMPORT JOB:
 
@@ -150,7 +148,10 @@ export async function fetchImportJob(
 type CryptoKeyVersionState = string;
 import { UserDetails } from "../../auth/auth0.types";
 import { sleep } from "../../utils/promises/promises.utils";
-import { Route } from "./common.constants";
+import { Route } from "../client.constants";
+import { UI8A } from "../../utils/lib/binary-data-types/binary-data-types.utils";
+import { B64String } from "../../utils/lib/binary-data-types/binary-data-types.types";
+import { CommonEncodedRequestData } from "../client.types";
 
 interface ImportKeysResult {
   signKeyState: null | CryptoKeyVersionState;
@@ -250,31 +251,20 @@ function isKeyPair(
 
 // PEM conversion:
 
-function base64ToArrayBuffer(b64: string) {
-  const byteString = window.atob(b64);
-  const byteArray = new Uint8Array(byteString.length);
-
-  for (let i = 0; i < byteString.length; i++) {
-    byteArray[i] = byteString.charCodeAt(i);
-  }
-
-  return byteArray;
-}
-
-type PEM =
+// TODO: Export this type:
+export type PEMString =
   `-----BEGIN PRIVATE KEY-----\n${B64String}\n-----END PRIVATE KEY-----`;
 
-export function pemToUint8Array(pem: PEM) {
+export function pemToUint8Array(pem: PEMString) {
   const pemBufferString = pem
     .replaceAll("\n", "")
     .replace("-----BEGIN PUBLIC KEY-----", "")
     .replace("-----END PUBLIC KEY-----", "") as B64String;
 
-  // return base64ToArrayBuffer(pemBufferString);
-  return b64ToUint8Array(pemBufferString);
+  return UI8A.from(pemBufferString, "B64String");
 }
 
-async function cryptoKeyFromPEM(pem: PEM) {
+async function cryptoKeyFromPEM(pem: PEMString) {
   console.log(`PEM to convert =`, pem);
 
   return window.crypto.subtle.importKey(
@@ -324,7 +314,7 @@ export async function testClientKeyGenerationAndWrapping(
   let wrappingKey: CryptoKey | null = null;
 
   try {
-    wrappingKey = await cryptoKeyFromPEM(wrappingKeyPEM as PEM);
+    wrappingKey = await cryptoKeyFromPEM(wrappingKeyPEM as PEMString);
 
     console.log("wrappingKey =", wrappingKey);
   } catch (err) {

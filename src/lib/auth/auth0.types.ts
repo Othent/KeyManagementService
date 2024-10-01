@@ -2,7 +2,6 @@ import {
   AuthorizationParams as Auth0AuthorizationParams,
   IdToken,
 } from "@auth0/auth0-spa-js";
-import { B64UrlString, BinaryDataType } from "../utils/arweaveUtils";
 import { RemoveIndexSignature } from "../utils/typescript/type-utils.types";
 import {
   AppInfo,
@@ -12,7 +11,11 @@ import {
   Auth0Strategy,
   OthentStorageKey,
 } from "../config/config.types";
-import { Route } from "../othent-kms-client/operations/common.constants";
+import { Route } from "../othent-kms-client/client.constants";
+import {
+  B64UrlString,
+  BinaryDataType,
+} from "../utils/lib/binary-data-types/binary-data-types.types";
 
 // OthentAuth0Client:
 

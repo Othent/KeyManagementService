@@ -1,12 +1,13 @@
 import { AxiosInstance } from "axios";
 import { OthentAuth0Client } from "../../auth/auth0";
-import {
-  CommonEncodedRequestData,
-  normalizeBufferDataWithNull,
-} from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
-import { B64String, BinaryDataType } from "../../utils/arweaveUtils";
-import { Route } from "./common.constants";
+import { Route } from "../client.constants";
+import {
+  B64String,
+  BinaryDataType,
+} from "../../utils/lib/binary-data-types/binary-data-types.types";
+import { CommonEncodedRequestData } from "../client.types";
+import { normalizeLegacyBufferDataOrB64 } from "../../utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.utils";
 
 interface SignResponseData {
   signature: B64String;
@@ -29,7 +30,7 @@ export async function sign(
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    signature = normalizeBufferDataWithNull(signResponse.data.signature);
+    signature = normalizeLegacyBufferDataOrB64(signResponse.data.signature);
   } catch (err) {
     throw parseErrorResponse(err);
   }

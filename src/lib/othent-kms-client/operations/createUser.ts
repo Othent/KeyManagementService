@@ -1,9 +1,9 @@
 import { AxiosInstance } from "axios";
-import { CommonEncodedRequestData } from "./common.types";
 import { parseErrorResponse } from "../../utils/errors/error.utils";
 import { OthentAuth0Client } from "../../auth/auth0";
-import { Route } from "./common.constants";
+import { Route } from "../client.constants";
 import { IdTokenWithData } from "../../auth/auth0.types";
+import { CommonEncodedRequestData } from "../client.types";
 
 export interface CreateUserOptions {
   importOnly?: boolean;
