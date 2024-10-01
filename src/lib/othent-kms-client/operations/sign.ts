@@ -6,8 +6,8 @@ import {
   B64String,
   BinaryDataType,
 } from "../../utils/lib/binary-data-types/binary-data-types.types";
-import { normalizeBufferDataWithNull } from "../../utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.utils";
 import { CommonEncodedRequestData } from "../client.types";
+import { normalizeLegacyBufferDataOrB64 } from "../../utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.utils";
 
 interface SignResponseData {
   signature: B64String;
@@ -30,7 +30,7 @@ export async function sign(
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    signature = normalizeBufferDataWithNull(signResponse.data.signature);
+    signature = normalizeLegacyBufferDataOrB64(signResponse.data.signature);
   } catch (err) {
     throw parseErrorResponse(err);
   }

@@ -26,6 +26,10 @@ export function uInt8ArrayFrom(
   source: B64String | B64UrlString,
   stringSourceType: "B64StringOrUrlString",
 ): Uint8Array;
+export function uInt8ArrayFrom(
+  source: string | BinaryDataType,
+  stringSourceType: StringSourceType,
+): Uint8Array;
 export function uInt8ArrayFrom(source: BinaryDataType): Uint8Array;
 export function uInt8ArrayFrom(
   source: string | B64String | B64UrlString | BinaryDataType,

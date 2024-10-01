@@ -6,7 +6,7 @@ import {
   B64String,
   BinaryDataType,
 } from "../../utils/lib/binary-data-types/binary-data-types.types";
-import { normalizeBufferDataWithNull } from "../../utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.utils";
+import { normalizeLegacyBufferDataOrB64 } from "../../utils/lib/legacy-serialized-buffers/legacy-serialized-buffer.utils";
 import { CommonEncodedRequestData } from "../client.types";
 
 interface DecryptResponseData {
@@ -30,7 +30,7 @@ export async function decrypt(
       encodedData,
     } satisfies CommonEncodedRequestData);
 
-    decryptedData = normalizeBufferDataWithNull(
+    decryptedData = normalizeLegacyBufferDataOrB64(
       decryptResponse.data.decryptedData,
     );
   } catch (err) {
